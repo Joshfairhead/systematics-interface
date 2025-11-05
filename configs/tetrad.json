@@ -3,7 +3,7 @@
   "display_name": "Tetrad",
   "node_count": 4,
   "k_notation": "K4",
-  "description": "Ideal/Directive/Instrumental/Ground - Sources in Activity Field",
+  "description": "",
   "color_scheme": {
     "nodes": "#E74C3C",
     "edges": "#888888",
