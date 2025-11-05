@@ -1,0 +1,14 @@
+[[hooks]]
+stage = "build"
+command = "echo"
+command_arguments = ["Building systematics-interface..."]
+
+[build]
+target = "index.html"
+
+[watch]
+ignore = ["target"]
+
+[serve]
+address = "127.0.0.1"
+port = 8080

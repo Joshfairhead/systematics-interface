@@ -1,0 +1,27 @@
+[package]
+name = "systematics-interface"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+yew = { version = "0.21", features = ["csr"] }
+wasm-bindgen = "0.2.92"
+web-sys = { version = "0.3", features = ["HtmlSelectElement", "HtmlInputElement"] }
+# API Integration dependencies
+reqwest = { version = "0.11", features = ["json"] }
+wasm-bindgen-futures = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+gloo-net = { version = "0.4", features = ["http"] }
+gloo-timers = { version = "0.3", features = ["futures"] }
+# Error handling
+anyhow = "1.0"
+# Local dependency for systematics core
+systematic-constructor = { path = "../systematic-constructor" }
+
+[profile.release]
+opt-level = "z"
+lto = true
