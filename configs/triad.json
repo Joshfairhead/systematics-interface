@@ -1,0 +1,13 @@
+{
+  "name": "triad",
+  "display_name": "Triad",
+  "node_count": 3,
+  "k_notation": "K3",
+  "description": "Trinity, the triangle, three forces",
+  "color_scheme": {
+    "nodes": "#9B59B6",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

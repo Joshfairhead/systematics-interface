@@ -1,0 +1,13 @@
+{
+  "name": "ennead",
+  "display_name": "Ennead",
+  "node_count": 9,
+  "k_notation": "K9",
+  "description": "Nine spheres, completion",
+  "color_scheme": {
+    "nodes": "#9B59B6",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

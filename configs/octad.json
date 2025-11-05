@@ -1,0 +1,13 @@
+{
+  "name": "octad",
+  "display_name": "Octad",
+  "node_count": 8,
+  "k_notation": "K8",
+  "description": "Eight-fold path, the octagon",
+  "color_scheme": {
+    "nodes": "#E67E22",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

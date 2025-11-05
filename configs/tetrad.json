@@ -1,0 +1,13 @@
+{
+  "name": "tetrad",
+  "display_name": "Tetrad",
+  "node_count": 4,
+  "k_notation": "K4",
+  "description": "Quaternary, the square, four elements",
+  "color_scheme": {
+    "nodes": "#E74C3C",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

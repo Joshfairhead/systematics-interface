@@ -19,8 +19,6 @@ gloo-net = { version = "0.4", features = ["http"] }
 gloo-timers = { version = "0.3", features = ["futures"] }
 # Error handling
 anyhow = "1.0"
-# Local dependency for systematics core
-systematic-constructor = { path = "../systematic-constructor" }
 
 [profile.release]
 opt-level = "z"
