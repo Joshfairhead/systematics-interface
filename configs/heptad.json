@@ -1,0 +1,13 @@
+{
+  "name": "heptad",
+  "display_name": "Heptad",
+  "node_count": 7,
+  "k_notation": "K7",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#3498DB",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

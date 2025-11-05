@@ -1,0 +1,13 @@
+{
+  "name": "decad",
+  "display_name": "Decad",
+  "node_count": 10,
+  "k_notation": "K10",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#16A085",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

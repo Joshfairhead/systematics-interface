@@ -1,0 +1,13 @@
+{
+  "name": "undecad",
+  "display_name": "Undecad",
+  "node_count": 11,
+  "k_notation": "K11",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#C0392B",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "hexad",
+  "display_name": "Hexad",
+  "node_count": 6,
+  "k_notation": "K6",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#1ABC9C",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

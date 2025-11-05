@@ -1,0 +1,13 @@
+{
+  "name": "dyad",
+  "display_name": "Dyad",
+  "node_count": 2,
+  "k_notation": "K2",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#50C878",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

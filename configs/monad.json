@@ -1,0 +1,13 @@
+{
+  "name": "monad",
+  "display_name": "Monad",
+  "node_count": 1,
+  "k_notation": "K1",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#4A90E2",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

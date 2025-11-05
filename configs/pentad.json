@@ -1,0 +1,13 @@
+{
+  "name": "pentad",
+  "display_name": "Pentad",
+  "node_count": 5,
+  "k_notation": "K5",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#F39C12",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}

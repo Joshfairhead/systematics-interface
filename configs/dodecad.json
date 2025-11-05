@@ -1,0 +1,13 @@
+{
+  "name": "dodecad",
+  "display_name": "Dodecad",
+  "node_count": 12,
+  "k_notation": "K12",
+  "description": "",
+  "color_scheme": {
+    "nodes": "#D35400",
+    "edges": "#888888",
+    "selected_node": "#FF6B6B",
+    "selected_edge": "#FF6B6B"
+  }
+}
