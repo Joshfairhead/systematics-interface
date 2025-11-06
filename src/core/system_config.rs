@@ -28,7 +28,7 @@ impl SystemConfig {
                 k_notation: "K1".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#4A90E2".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -41,7 +41,7 @@ impl SystemConfig {
                 k_notation: "K2".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#50C878".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -54,7 +54,7 @@ impl SystemConfig {
                 k_notation: "K3".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#9B59B6".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -67,7 +67,7 @@ impl SystemConfig {
                 k_notation: "K4".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#E74C3C".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -80,7 +80,7 @@ impl SystemConfig {
                 k_notation: "K5".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#F39C12".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -106,7 +106,7 @@ impl SystemConfig {
                 k_notation: "K7".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#3498DB".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -119,7 +119,7 @@ impl SystemConfig {
                 k_notation: "K8".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#E67E22".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -132,7 +132,7 @@ impl SystemConfig {
                 k_notation: "K9".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#9B59B6".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -145,7 +145,7 @@ impl SystemConfig {
                 k_notation: "K10".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#16A085".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -158,7 +158,7 @@ impl SystemConfig {
                 k_notation: "K11".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#C0392B".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),
@@ -171,7 +171,7 @@ impl SystemConfig {
                 k_notation: "K12".to_string(),
                 description: "".to_string(),
                 color_scheme: ColorScheme {
-                    nodes: "#D35400".to_string(),
+                    nodes: "#1ABC9C".to_string(),
                     edges: "#888888".to_string(),
                     selected_node: "#FF6B6B".to_string(),
                     selected_edge: "#FF6B6B".to_string(),

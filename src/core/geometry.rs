@@ -100,7 +100,7 @@ impl GeometryCalculator {
             }
             4 => {
                 // Diamond shape for tetrad
-                let diamond_size = size * 0.35;
+                let diamond_size = size * 0.38;
 
                 vec![
                     Point { x: cx, y: cy - diamond_size },
