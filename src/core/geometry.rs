@@ -87,7 +87,7 @@ impl GeometryCalculator {
             }
             3 => {
                 // Equilateral triangle
-                let side_length = size * 0.70;
+                let side_length = size * 0.76;
                 let height = side_length * (3.0_f64.sqrt() / 2.0);
                 let half_side = side_length / 2.0;
                 let right_offset = height / 2.0 + size * 0.05;
