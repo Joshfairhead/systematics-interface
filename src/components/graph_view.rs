@@ -1,5 +1,5 @@
 use yew::prelude::*;
-use crate::core::geometry::{GeometryCalculator, GraphLayout, Edge};
+use crate::core::geometry::{GeometryCalculator, GraphLayout};
 use crate::core::system_config::SystemConfig;
 
 #[derive(Properties, PartialEq)]
