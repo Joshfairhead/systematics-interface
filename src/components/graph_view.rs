@@ -63,6 +63,14 @@ impl Component for GraphView {
 
         html! {
             <div class="graph-view">
+                <svg
+                    class="graph-svg"
+                    viewBox="0 0 800 800"
+                >
+                    { self.render_edges(&layout, system) }
+                    { self.render_symbolic_circles(&layout, system) }
+                    { self.render_nodes(ctx, &layout, system) }
+                </svg>
                 {
                     if let Some(node_idx) = self.selected_node {
                         html! {
@@ -82,14 +90,6 @@ impl Component for GraphView {
                         html! {}
                     }
                 }
-                <svg
-                    class="graph-svg"
-                    viewBox="0 0 800 800"
-                >
-                    { self.render_edges(&layout, system) }
-                    { self.render_symbolic_circles(&layout, system) }
-                    { self.render_nodes(ctx, &layout, system) }
-                </svg>
             </div>
         }
     }
