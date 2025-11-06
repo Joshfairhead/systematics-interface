@@ -56,9 +56,9 @@ impl Component for GraphView {
         let system = &ctx.props().system;
         let layout = GeometryCalculator::calculate_system_layout(
             &system.name,
-            800.0,
-            800.0,
-            1400.0,
+            400.0,
+            400.0,
+            700.0,
         );
 
         html! {
@@ -84,7 +84,7 @@ impl Component for GraphView {
                 }
                 <svg
                     class="graph-svg"
-                    viewBox="0 0 1600 1600"
+                    viewBox="0 0 800 800"
                 >
                     { self.render_edges(&layout, system) }
                     { self.render_symbolic_circles(&layout, system) }
