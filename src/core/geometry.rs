@@ -147,7 +147,7 @@ impl GeometryCalculator {
             "monad" => {
                 Some(SymbolicCircle {
                     center: Point { x: center_x, y: center_y },
-                    radius: size * 0.45,
+                    radius: size * 0.38,
                 })
             },
             _ => None,
