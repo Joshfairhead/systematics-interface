@@ -11,48 +11,54 @@
 }
 
 .top-navbar {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-    padding: 0.5rem 1rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.4rem 0.8rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .number-selector {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
     justify-content: center;
     flex-wrap: wrap;
 }
 
 .number-button {
-    min-width: 44px;
-    height: 44px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
+    min-width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 10px;
     color: white;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: inherit;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .number-button:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(15px);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.6);
 }
 
 .number-button.selected {
+    background: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(15px);
     color: white;
-    border-width: 3px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    transform: translateY(-1px);
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
 }
 
 .main-view {
