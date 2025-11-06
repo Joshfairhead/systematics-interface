@@ -89,8 +89,6 @@ impl Component for GraphView {
                 </div>
                 <svg
                     class="graph-svg"
-                    width="800"
-                    height="800"
                     viewBox="0 0 800 800"
                 >
                     { self.render_edges(&layout, system) }

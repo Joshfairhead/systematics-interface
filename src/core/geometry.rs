@@ -112,8 +112,7 @@ impl GeometryCalculator {
             _ => {
                 // Regular polygon for higher-order systems
                 let radius = match node_count {
-                    5 | 6 => size * 0.40,
-                    7 | 8 => size * 0.45,
+                    5 | 6 => size * 0.38,
                     _ => size * 0.38,
                 };
                 let rotation = -PI / 2.0; // Start at top
