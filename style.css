@@ -73,6 +73,11 @@
 
 .graph-info {
     text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 12px;
+    min-width: 300px;
 }
 
 .graph-info h2 {
