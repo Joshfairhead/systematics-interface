@@ -63,27 +63,25 @@ impl Component for GraphView {
 
         html! {
             <div class="graph-view">
-                <div class="graph-info">
-                    {
-                        if let Some(node_idx) = self.selected_node {
-                            html! {
-                                <div class="selection-info">
-                                    <strong>{ "Selected Node: " }</strong>
-                                    <span>{ format!("Node {}", node_idx) }</span>
-                                </div>
-                            }
-                        } else if let Some((from, to)) = self.selected_edge {
-                            html! {
-                                <div class="selection-info">
-                                    <strong>{ "Selected Edge: " }</strong>
-                                    <span>{ format!("Node {} ↔ Node {}", from, to) }</span>
-                                </div>
-                            }
-                        } else {
-                            html! {}
+                {
+                    if let Some(node_idx) = self.selected_node {
+                        html! {
+                            <div class="selection-info">
+                                <strong>{ "Selected Node: " }</strong>
+                                <span>{ format!("Node {}", node_idx) }</span>
+                            </div>
                         }
+                    } else if let Some((from, to)) = self.selected_edge {
+                        html! {
+                            <div class="selection-info">
+                                <strong>{ "Selected Edge: " }</strong>
+                                <span>{ format!("Node {} ↔ Node {}", from, to) }</span>
+                            </div>
+                        }
+                    } else {
+                        html! {}
                     }
-                </div>
+                }
                 <svg
                     class="graph-svg"
                     viewBox="0 0 1600 1600"
