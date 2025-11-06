@@ -10,87 +10,49 @@
     color: white;
 }
 
-.app-header {
-    text-align: center;
-    padding: 2rem;
-    background: rgba(0, 0, 0, 0.3);
+.top-navbar {
+    background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
     border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.app-header h1 {
-    margin: 0;
-    font-size: 2.5rem;
-    font-weight: 600;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.subtitle {
-    margin: 0.5rem 0 0 0;
-    font-size: 1.1rem;
-    opacity: 0.9;
-}
-
-.app-content {
+.number-selector {
     display: flex;
-    flex: 1;
-    overflow: hidden;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
-.sidebar {
-    width: 300px;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    padding: 1.5rem;
-    overflow-y: auto;
-    border-right: 2px solid rgba(255, 255, 255, 0.1);
-}
-
-.system-selector h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1.3rem;
-    text-align: center;
-}
-
-.system-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.system-button {
+.number-button {
+    min-width: 44px;
+    height: 44px;
     background: rgba(255, 255, 255, 0.1);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
-    padding: 0.75rem;
     color: white;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-family: inherit;
-    text-align: left;
-}
-
-.system-button:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateX(5px);
-}
-
-.system-button.selected {
-    background: rgba(255, 255, 255, 0.3);
-    border-width: 3px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.button-label {
     font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.button-notation {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    font-family: 'Courier New', monospace;
+.number-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.number-button.selected {
+    color: white;
+    border-width: 3px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
 }
 
 .main-view {
@@ -98,7 +60,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: 1rem;
     overflow: auto;
 }
 
@@ -178,18 +140,18 @@
 }
 
 @media (max-width: 768px) {
-    .app-content {
-        flex-direction: column;
+    .number-selector {
+        gap: 0.3rem;
     }
 
-    .sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    .number-button {
+        min-width: 38px;
+        height: 38px;
+        font-size: 1rem;
     }
 
     .main-view {
-        padding: 1rem;
+        padding: 0.5rem;
     }
 
     .graph-svg {

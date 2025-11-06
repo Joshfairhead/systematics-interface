@@ -40,24 +40,17 @@ impl Component for App {
 
         html! {
             <div class="app">
-                <header class="app-header">
-                    <h1>{ "Systematics Interface" }</h1>
-                    <p class="subtitle">{ "Complete Graphs K1-K12 with Geometric Visualizations" }</p>
-                </header>
+                <nav class="top-navbar">
+                    <SystemSelector
+                        systems={ self.systems.clone() }
+                        selected={ self.selected_system.clone() }
+                        on_select={ on_select }
+                    />
+                </nav>
 
-                <div class="app-content">
-                    <aside class="sidebar">
-                        <SystemSelector
-                            systems={ self.systems.clone() }
-                            selected={ self.selected_system.clone() }
-                            on_select={ on_select }
-                        />
-                    </aside>
-
-                    <main class="main-view">
-                        <GraphView system={ selected_config } />
-                    </main>
-                </div>
+                <main class="main-view">
+                    <GraphView system={ selected_config } />
+                </main>
             </div>
         }
     }
