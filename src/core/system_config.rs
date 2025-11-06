@@ -8,6 +8,7 @@ pub struct SystemConfig {
     pub k_notation: String,
     pub description: String,
     pub color_scheme: ColorScheme,
+    pub geometry: Option<Geometry>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -18,166 +19,48 @@ pub struct ColorScheme {
     pub selected_edge: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Geometry {
+    pub indexes: Vec<usize>,
+    pub coordinates: Vec<Coordinate>,
+    pub edges: Vec<[usize; 2]>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Coordinate {
+    pub x: f64,
+    pub y: f64,
+    pub z: Option<f64>,
+}
+
 impl SystemConfig {
     pub fn get_all_systems() -> Vec<SystemConfig> {
-        vec![
-            SystemConfig {
-                name: "monad".to_string(),
-                display_name: "Monad".to_string(),
-                node_count: 1,
-                k_notation: "K1".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#4A90E2".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "dyad".to_string(),
-                display_name: "Dyad".to_string(),
-                node_count: 2,
-                k_notation: "K2".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#50C878".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "triad".to_string(),
-                display_name: "Triad".to_string(),
-                node_count: 3,
-                k_notation: "K3".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#9B59B6".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "tetrad".to_string(),
-                display_name: "Tetrad".to_string(),
-                node_count: 4,
-                k_notation: "K4".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#E74C3C".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "pentad".to_string(),
-                display_name: "Pentad".to_string(),
-                node_count: 5,
-                k_notation: "K5".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#F39C12".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "hexad".to_string(),
-                display_name: "Hexad".to_string(),
-                node_count: 6,
-                k_notation: "K6".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#1ABC9C".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "heptad".to_string(),
-                display_name: "Heptad".to_string(),
-                node_count: 7,
-                k_notation: "K7".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#3498DB".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "octad".to_string(),
-                display_name: "Octad".to_string(),
-                node_count: 8,
-                k_notation: "K8".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#E67E22".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "ennead".to_string(),
-                display_name: "Ennead".to_string(),
-                node_count: 9,
-                k_notation: "K9".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#9B59B6".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "decad".to_string(),
-                display_name: "Decad".to_string(),
-                node_count: 10,
-                k_notation: "K10".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#16A085".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "undecad".to_string(),
-                display_name: "Undecad".to_string(),
-                node_count: 11,
-                k_notation: "K11".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#C0392B".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-            SystemConfig {
-                name: "dodecad".to_string(),
-                display_name: "Dodecad".to_string(),
-                node_count: 12,
-                k_notation: "K12".to_string(),
-                description: "".to_string(),
-                color_scheme: ColorScheme {
-                    nodes: "#D35400".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                },
-            },
-        ]
+        let config_files = [
+            ("monad", include_str!("../../configs/monad.json")),
+            ("dyad", include_str!("../../configs/dyad.json")),
+            ("triad", include_str!("../../configs/triad.json")),
+            ("tetrad", include_str!("../../configs/tetrad.json")),
+            ("pentad", include_str!("../../configs/pentad.json")),
+            ("hexad", include_str!("../../configs/hexad.json")),
+            ("heptad", include_str!("../../configs/heptad.json")),
+            ("octad", include_str!("../../configs/octad.json")),
+            ("ennead", include_str!("../../configs/ennead.json")),
+            ("decad", include_str!("../../configs/decad.json")),
+            ("undecad", include_str!("../../configs/undecad.json")),
+            ("dodecad", include_str!("../../configs/dodecad.json")),
+        ];
+
+        config_files
+            .iter()
+            .filter_map(|(name, json_str)| {
+                serde_json::from_str::<SystemConfig>(json_str)
+                    .map_err(|e| {
+                        web_sys::console::error_1(&format!("Failed to parse {} config: {}", name, e).into());
+                        e
+                    })
+                    .ok()
+            })
+            .collect()
     }
 
     pub fn get_by_name(name: &str) -> Option<SystemConfig> {

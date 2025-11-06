@@ -9,5 +9,12 @@
     "edges": "#888888",
     "selected_node": "#FF6B6B",
     "selected_edge": "#FF6B6B"
+  },
+  "geometry": {
+    "indexes": [0],
+    "coordinates": [
+      {"x": 0.0, "y": 0.0, "z": null}
+    ],
+    "edges": []
   }
 }

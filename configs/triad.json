@@ -9,5 +9,14 @@
     "edges": "#888888",
     "selected_node": "#FF6B6B",
     "selected_edge": "#FF6B6B"
+  },
+  "geometry": {
+    "indexes": [0, 1, 2],
+    "coordinates": [
+      {"x": 0.0, "y": 1.0, "z": null},
+      {"x": 0.0, "y": -1.0, "z": null},
+      {"x": 1.0, "y": 0.0, "z": null}
+    ],
+    "edges": [[0, 1], [1, 2], [2, 0]]
   }
 }

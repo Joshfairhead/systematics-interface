@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use crate::core::system_config::SystemConfig;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Point {
@@ -36,10 +37,43 @@ impl GeometryCalculator {
         center_y: f64,
         size: f64,
     ) -> GraphLayout {
+        // Try to load geometry from config first
+        if let Some(config) = SystemConfig::get_by_name(system_type) {
+            if let Some(geometry) = config.geometry {
+                // Use geometry from config file
+                let nodes = geometry.coordinates.iter().map(|coord| {
+                    Point {
+                        x: center_x + coord.x * size,
+                        y: center_y + coord.y * size,
+                    }
+                }).collect();
+
+                let edges = geometry.edges.iter().map(|edge| {
+                    Edge {
+                        from: edge[0],
+                        to: edge[1],
+                    }
+                }).collect();
+
+                let node_radius = 12.0;
+                let symbolic_circle = Self::get_symbolic_circle(system_type, center_x, center_y, size);
+                let symbolic_circles = Self::get_symbolic_circles(system_type, center_x, center_y, size);
+
+                return GraphLayout {
+                    nodes,
+                    edges,
+                    node_radius,
+                    symbolic_circle,
+                    symbolic_circles,
+                };
+            }
+        }
+
+        // Fallback to old calculation method if geometry not found in config
         let node_count = Self::get_node_count(system_type);
         let nodes = Self::calculate_node_positions(node_count, center_x, center_y, size);
         let edges = Self::generate_complete_graph_edges(node_count);
-        let node_radius = 12.0; // Fixed node radius
+        let node_radius = 12.0;
         let symbolic_circle = Self::get_symbolic_circle(system_type, center_x, center_y, size);
         let symbolic_circles = Self::get_symbolic_circles(system_type, center_x, center_y, size);
 
