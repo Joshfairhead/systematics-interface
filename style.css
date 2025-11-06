@@ -75,9 +75,8 @@
 
 .graph-info {
     text-align: center;
-    padding: 1.5rem;
-    border-radius: 12px;
-    min-width: 300px;
+    padding: 0;
+    margin: 0;
 }
 
 .graph-info h2 {
