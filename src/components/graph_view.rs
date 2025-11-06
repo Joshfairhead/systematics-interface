@@ -56,17 +56,14 @@ impl Component for GraphView {
         let system = &ctx.props().system;
         let layout = GeometryCalculator::calculate_system_layout(
             &system.name,
-            400.0,
-            400.0,
-            700.0,
+            800.0,
+            800.0,
+            1400.0,
         );
 
         html! {
             <div class="graph-view">
                 <div class="graph-info">
-                    <h2>{ &system.display_name }</h2>
-                    <p class="k-notation">{ &system.k_notation }</p>
-                    <p class="description">{ &system.description }</p>
                     {
                         if let Some(node_idx) = self.selected_node {
                             html! {
@@ -89,7 +86,7 @@ impl Component for GraphView {
                 </div>
                 <svg
                     class="graph-svg"
-                    viewBox="0 0 800 800"
+                    viewBox="0 0 1600 1600"
                 >
                     { self.render_edges(&layout, system) }
                     { self.render_symbolic_circles(&layout, system) }
