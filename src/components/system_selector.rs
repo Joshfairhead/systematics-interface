@@ -11,9 +11,8 @@ pub struct SystemSelectorProps {
 #[function_component(SystemSelector)]
 pub fn system_selector(props: &SystemSelectorProps) -> Html {
     html! {
-        <div class="system-selector">
-            <h3>{ "Select System" }</h3>
-            <div class="system-buttons">
+        <nav class="top-nav">
+            <div class="nav-items">
                 {
                     props.systems.iter().map(|system| {
                         let is_selected = system.name == props.selected;
@@ -27,17 +26,16 @@ pub fn system_selector(props: &SystemSelectorProps) -> Html {
 
                         html! {
                             <button
-                                class={ if is_selected { "system-button selected" } else { "system-button" } }
+                                class={ if is_selected { "nav-button selected" } else { "nav-button" } }
                                 onclick={ onclick }
-                                style={ format!("border-color: {}", system.color_scheme.nodes) }
+                                title={ system.k_notation.clone() }
                             >
-                                <div class="button-label">{ &system.display_name }</div>
-                                <div class="button-notation">{ &system.k_notation }</div>
+                                { &system.display_name }
                             </button>
                         }
                     }).collect::<Html>()
                 }
             </div>
-        </div>
+        </nav>
     }
 }

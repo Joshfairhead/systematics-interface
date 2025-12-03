@@ -40,19 +40,15 @@ impl Component for App {
 
         html! {
             <div class="app">
-                <div class="app-content">
-                    <aside class="sidebar">
-                        <SystemSelector
-                            systems={ self.systems.clone() }
-                            selected={ self.selected_system.clone() }
-                            on_select={ on_select }
-                        />
-                    </aside>
+                <SystemSelector
+                    systems={ self.systems.clone() }
+                    selected={ self.selected_system.clone() }
+                    on_select={ on_select }
+                />
 
-                    <main class="main-view">
-                        <GraphView system={ selected_config } />
-                    </main>
-                </div>
+                <main class="main-view">
+                    <GraphView system={ selected_config } />
+                </main>
             </div>
         }
     }
