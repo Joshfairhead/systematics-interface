@@ -40,11 +40,6 @@ impl Component for App {
 
         html! {
             <div class="app">
-                <header class="app-header">
-                    <h1>{ "Systematics Interface" }</h1>
-                    <p class="subtitle">{ "Complete Graphs K1-K12 with Geometric Visualizations" }</p>
-                </header>
-
                 <div class="app-content">
                     <aside class="sidebar">
                         <SystemSelector

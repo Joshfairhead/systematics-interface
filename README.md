@@ -140,6 +140,24 @@ Each system has a JSON configuration in `configs/`:
 }
 ```
 
+## GraphQL API Integration
+
+This interface now supports fetching data from the [systematics-v0.0.3 GraphQL API](https://github.com/Joshfairhead/systematics-v0.0.3).
+
+### Quick Start
+
+**Using Mock Data (Default):**
+```bash
+trunk serve
+```
+
+**Using Real GraphQL API:**
+1. Edit `src/api_app.rs` line 33: `let use_graphql = true;`
+2. Update endpoint URL on line 36 to your API
+3. Run: `trunk serve`
+
+See [ENABLE_GRAPHQL.md](ENABLE_GRAPHQL.md) for quick setup or [GRAPHQL_INTEGRATION.md](GRAPHQL_INTEGRATION.md) for full documentation.
+
 ## Future Enhancements
 
 - Edge interaction and selection
@@ -147,7 +165,8 @@ Each system has a JSON configuration in `configs/`:
 - Export graph data
 - Animation transitions between systems
 - Custom node positioning
-- Integration with systematic-constructor library
+- Environment-based API configuration
+- Caching and real-time updates
 
 ## Technologies
 

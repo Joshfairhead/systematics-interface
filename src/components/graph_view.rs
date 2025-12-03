@@ -63,30 +63,6 @@ impl Component for GraphView {
 
         html! {
             <div class="graph-view">
-                <div class="graph-info">
-                    <h2>{ &system.display_name }</h2>
-                    <p class="k-notation">{ &system.k_notation }</p>
-                    <p class="description">{ &system.description }</p>
-                    {
-                        if let Some(node_idx) = self.selected_node {
-                            html! {
-                                <div class="selection-info">
-                                    <strong>{ "Selected Node: " }</strong>
-                                    <span>{ format!("Node {}", node_idx) }</span>
-                                </div>
-                            }
-                        } else if let Some((from, to)) = self.selected_edge {
-                            html! {
-                                <div class="selection-info">
-                                    <strong>{ "Selected Edge: " }</strong>
-                                    <span>{ format!("Node {} ↔ Node {}", from, to) }</span>
-                                </div>
-                            }
-                        } else {
-                            html! {}
-                        }
-                    }
-                </div>
                 <svg
                     class="graph-svg"
                     width="800"
