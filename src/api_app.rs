@@ -2,6 +2,7 @@ use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::api::models::SystemData;
 use crate::api::client::MockApiClient;
+use crate::api::graphql_client::GraphQLClient;
 use crate::components::api_graph_view::ApiGraphView;
 use crate::components::system_selector::SystemSelector;
 use crate::core::system_config::SystemConfig;
@@ -18,6 +19,8 @@ pub struct ApiApp {
     selected_system: Option<SystemData>,
     loading: bool,
     error: Option<String>,
+    graphql_client: Option<GraphQLClient>,
+    use_graphql: bool,
 }
 
 impl Component for ApiApp {
@@ -25,10 +28,36 @@ impl Component for ApiApp {
     type Properties = ();
 
     fn create(ctx: &Context<Self>) -> Self {
+        // Configuration: Set to true to use GraphQL API, false to use mock data
+        // TODO: Read from environment variable or config
+        let use_graphql = false; // Change to true when ready to use real API
+
+        // GraphQL endpoint - update this to your deployed API URL
+        let graphql_endpoint = "http://localhost:8080/graphql".to_string();
+
+        let graphql_client = if use_graphql {
+            Some(GraphQLClient::new(graphql_endpoint))
+        } else {
+            None
+        };
+
         // Load all systems on initialization
         let link = ctx.link().clone();
+        let use_gql = use_graphql;
+        let client = graphql_client.clone();
+
         spawn_local(async move {
-            match MockApiClient::fetch_all_systems().await {
+            let result = if use_gql {
+                if let Some(client) = client {
+                    client.fetch_all_systems().await
+                } else {
+                    MockApiClient::fetch_all_systems().await
+                }
+            } else {
+                MockApiClient::fetch_all_systems().await
+            };
+
+            match result {
                 Ok(systems) => {
                     link.send_message(ApiAppMsg::SystemsLoaded(systems));
                 }
@@ -43,6 +72,8 @@ impl Component for ApiApp {
             selected_system: None,
             loading: true,
             error: None,
+            graphql_client,
+            use_graphql,
         }
     }
 
@@ -54,8 +85,21 @@ impl Component for ApiApp {
 
                 // Fetch the selected system
                 let link = ctx.link().clone();
+                let use_gql = self.use_graphql;
+                let client = self.graphql_client.clone();
+
                 spawn_local(async move {
-                    match MockApiClient::fetch_system(&name).await {
+                    let result = if use_gql {
+                        if let Some(client) = client {
+                            client.fetch_system(&name).await
+                        } else {
+                            MockApiClient::fetch_system(&name).await
+                        }
+                    } else {
+                        MockApiClient::fetch_system(&name).await
+                    };
+
+                    match result {
                         Ok(system) => {
                             link.send_message(ApiAppMsg::SystemLoaded(system));
                         }
