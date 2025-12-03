@@ -58,9 +58,8 @@ impl Component for ApiGraphView {
             <div class="graph-view">
                 <svg
                     class="graph-svg"
-                    width="800"
-                    height="800"
                     viewBox="0 0 800 800"
+                    preserveAspectRatio="xMidYMid meet"
                 >
                     { self.render_edges(&system.edges, &system.coordinates, system) }
                     { self.render_nodes(ctx, &system.coordinates, system) }
