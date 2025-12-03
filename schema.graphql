@@ -1,0 +1,88 @@
+type Query {
+  system(name: String!): System
+  allSystems: [System!]!
+  systemGeometry(name: String!): Geometry
+  systemTopology(name: String!): Topology
+  systemVocabulary(name: String!): Vocabulary
+  systemMetadata(name: String!): Metadata
+  term(name: String!): Term
+  termsInSystem(systemName: String!): [Term!]!
+  systemsByCoherenceAttribute(attribute: String!): [System!]!
+  systemsByTermDesignation(designation: String!): [System!]!
+}
+
+type System {
+  name: String!
+  coherenceAttributes: [String!]!
+  termDesignation: String
+  connectiveDesignation: String
+  source: String
+  topology: Topology!
+  geometry: Geometry!
+  terms: [Term!]!
+  connectors: [Connector!]!
+}
+
+type Topology {
+  systemName: String!
+  nodes: [Node!]!
+  edges: [Edge!]!
+}
+
+type Geometry {
+  systemName: String!
+  coordinates: [Coordinate!]!
+  lines: [Line!]!
+}
+
+type Vocabulary {
+  systemName: String!
+  termCharacters: [String!]!
+  connectiveCharacters: [ConnectiveCharacter!]!
+}
+
+type Metadata {
+  systemName: String!
+  kNotation: String!
+  description: String!
+  displayName: String!
+}
+
+type Node {
+  index: Int!
+}
+
+type Edge {
+  from: Int!
+  to: Int!
+}
+
+type Coordinate {
+  x: Float!
+  y: Float!
+  z: Float
+}
+
+type Line {
+  start: Coordinate!
+  end: Coordinate!
+}
+
+type Term {
+  name: String!
+  system: String!
+  nodeIndex: Int!
+  coordinate: Coordinate
+}
+
+type Connector {
+  name: String!
+  from: String!
+  to: String!
+}
+
+type ConnectiveCharacter {
+  name: String!
+  from: String!
+  to: String!
+}
