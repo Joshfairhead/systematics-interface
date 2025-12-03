@@ -4,10 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Systematics Interface</title>
+    <link rel="stylesheet" href="/style-4ca2ea51bff70ebc.css" integrity="sha384-gLqQ8l27J4gDhsPa6jdInp0Gu3SMtRKdGuvEfJtFkZoQjfQYkT27+SBI6Gqon3z+"/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    </style>
+<link rel="modulepreload" href="/systematics-interface-cc41e52cf5bd9d3b.js" crossorigin="anonymous" integrity="sha384-QmqjuTLd2SUkoErGwtVJEXWOJwbJ84zU2IOcWEHEk/CdhQNIYtVqAQijdgKLISB0"><link rel="preload" href="/systematics-interface-cc41e52cf5bd9d3b_bg.wasm" crossorigin="anonymous" integrity="sha384-jlRZuh5YCekn6f+/HaIz1G31EwV+cVXAHf8LbB8MUVYhLRE/v54ywP/M6hfYvezU" as="fetch" type="application/wasm"></head>
+<body>
     
 <script type="module">
-import init, * as bindings from '/systematics-interface-bddf3fddc9c3a8e0.js';
-const wasm = await init({ module_or_path: '/systematics-interface-bddf3fddc9c3a8e0_bg.wasm' });
+import init, * as bindings from '/systematics-interface-cc41e52cf5bd9d3b.js';
+const wasm = await init({ module_or_path: '/systematics-interface-cc41e52cf5bd9d3b_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -16,16 +26,6 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-    <link rel="stylesheet" href="/style-3259477c333a8b68.css" integrity="sha384-EyLqSFnhtyli0NnbKrgMx7g71ijpxWwdAL0G3rn+KDD1FNxVV8oUoSl5xmzet+K5"/>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-    </style>
-<link rel="modulepreload" href="/systematics-interface-bddf3fddc9c3a8e0.js" crossorigin="anonymous" integrity="sha384-BZ+fFloI7eIXCNJ8kH357u6xSWQlEpJuYX1XiTaVg0zSumjT5dSlcJH1l4dYRufe"><link rel="preload" href="/systematics-interface-bddf3fddc9c3a8e0_bg.wasm" crossorigin="anonymous" integrity="sha384-WaPa9Dq6dr/h5l77aX3b5lZJpGbIH6tDpUaMpHWC1TFPtkPnwC1sLsM6rE2Jm6/5" as="fetch" type="application/wasm"></head>
-<body>
 <script>"use strict";
 
 (function () {
