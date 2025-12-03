@@ -179,7 +179,11 @@ The interface uses an **800x800 SVG viewport**:
 - Center: (400, 400)
 - Typical range: 100-700 on both axes
 
-The GraphQL API should return coordinates in this coordinate space.
+**Coordinate Transformation**: The GraphQL client automatically transforms coordinates from the API to fit the viewport. The API can return coordinates in any scale (e.g., 0-1, 0-10, or raw mathematical coordinates), and they will be:
+- Scaled to fit within the viewport with 100px margins
+- Centered in the available space
+- Aspect ratio preserved
+- Special handling for single points (centered at 400, 400)
 
 ## Error Handling
 

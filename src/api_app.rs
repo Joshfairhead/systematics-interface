@@ -30,10 +30,10 @@ impl Component for ApiApp {
     fn create(ctx: &Context<Self>) -> Self {
         // Configuration: Set to true to use GraphQL API, false to use mock data
         // TODO: Read from environment variable or config
-        let use_graphql = false; // Change to true when ready to use real API
+        let use_graphql = true; // Using real GraphQL API
 
-        // GraphQL endpoint - update this to your deployed API URL
-        let graphql_endpoint = "http://localhost:8080/graphql".to_string();
+        // GraphQL endpoint - systematics-v0.0.3 server
+        let graphql_endpoint = "http://localhost:8000/graphql".to_string();
 
         let graphql_client = if use_graphql {
             Some(GraphQLClient::new(graphql_endpoint))

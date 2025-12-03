@@ -41,17 +41,21 @@ struct AllSystemsQueryResponse {
 #[derive(Deserialize, Debug, Clone)]
 struct GQLSystem {
     name: String,
-    #[serde(rename = "coherenceAttributes")]
-    coherence_attributes: Option<Vec<String>>,
+    #[serde(rename = "coherenceAttribute")]
+    coherence_attribute: String,
     #[serde(rename = "termDesignation")]
-    term_designation: Option<String>,
+    term_designation: String,
     #[serde(rename = "connectiveDesignation")]
-    connective_designation: Option<String>,
-    source: Option<String>,
-    topology: GQLTopology,
-    geometry: GQLGeometry,
-    terms: Vec<GQLTerm>,
-    connectors: Vec<GQLConnector>,
+    connective_designation: String,
+    source: String,
+    nodes: Vec<i32>,  // Just array of integers
+    edges: Vec<GQLEdge>,
+    points: Vec<GQLCoordinate>,
+    lines: Vec<GQLLine>,
+    #[serde(rename = "termCharacters")]
+    term_characters: Vec<GQLTerm>,  // Array of Term objects
+    #[serde(rename = "connectiveCharacters")]
+    connective_characters: Vec<GQLConnector>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -97,17 +101,16 @@ struct GQLLine {
 #[derive(Deserialize, Debug, Clone)]
 struct GQLTerm {
     name: String,
-    system: String,
-    #[serde(rename = "nodeIndex")]
-    node_index: usize,
-    coordinate: Option<GQLCoordinate>,
+    node: i32,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 struct GQLConnector {
     name: String,
-    from: String,
-    to: String,
+    #[serde(rename = "fromTerm")]
+    from_term: String,
+    #[serde(rename = "toTerm")]
+    to_term: String,
 }
 
 /// GraphQL API client for systematics data
@@ -128,54 +131,40 @@ impl GraphQLClient {
             query GetSystem($name: String!) {
                 system(name: $name) {
                     name
-                    coherenceAttributes
+                    coherenceAttribute
                     termDesignation
                     connectiveDesignation
                     source
-                    topology {
-                        systemName
-                        nodes {
-                            index
-                        }
-                        edges {
-                            from
-                            to
-                        }
-                    }
-                    geometry {
-                        systemName
-                        coordinates {
-                            x
-                            y
-                            z
-                        }
-                        lines {
-                            start {
-                                x
-                                y
-                                z
-                            }
-                            end {
-                                x
-                                y
-                                z
-                            }
-                        }
-                    }
-                    terms {
-                        name
-                        system
-                        nodeIndex
-                        coordinate {
-                            x
-                            y
-                            z
-                        }
-                    }
-                    connectors {
-                        name
+                    nodes
+                    edges {
                         from
                         to
+                    }
+                    points {
+                        x
+                        y
+                        z
+                    }
+                    lines {
+                        start {
+                            x
+                            y
+                            z
+                        }
+                        end {
+                            x
+                            y
+                            z
+                        }
+                    }
+                    termCharacters {
+                        name
+                        node
+                    }
+                    connectiveCharacters {
+                        name
+                        fromTerm
+                        toTerm
                     }
                 }
             }
@@ -209,54 +198,40 @@ impl GraphQLClient {
             query GetAllSystems {
                 allSystems {
                     name
-                    coherenceAttributes
+                    coherenceAttribute
                     termDesignation
                     connectiveDesignation
                     source
-                    topology {
-                        systemName
-                        nodes {
-                            index
-                        }
-                        edges {
-                            from
-                            to
-                        }
-                    }
-                    geometry {
-                        systemName
-                        coordinates {
-                            x
-                            y
-                            z
-                        }
-                        lines {
-                            start {
-                                x
-                                y
-                                z
-                            }
-                            end {
-                                x
-                                y
-                                z
-                            }
-                        }
-                    }
-                    terms {
-                        name
-                        system
-                        nodeIndex
-                        coordinate {
-                            x
-                            y
-                            z
-                        }
-                    }
-                    connectors {
-                        name
+                    nodes
+                    edges {
                         from
                         to
+                    }
+                    points {
+                        x
+                        y
+                        z
+                    }
+                    lines {
+                        start {
+                            x
+                            y
+                            z
+                        }
+                        end {
+                            x
+                            y
+                            z
+                        }
+                    }
+                    termCharacters {
+                        name
+                        node
+                    }
+                    connectiveCharacters {
+                        name
+                        fromTerm
+                        toTerm
                     }
                 }
             }
@@ -313,10 +288,13 @@ impl GraphQLClient {
 
     /// Convert GraphQL system to internal SystemData model
     fn convert_gql_system_to_system_data(&self, gql_system: GQLSystem) -> SystemData {
-        let node_count = gql_system.topology.nodes.len();
+        let node_count = gql_system.nodes.len();
+
+        // Convert system name to lowercase for consistency
+        let system_name = gql_system.name.to_lowercase();
 
         // Get color scheme from legacy config or use default
-        let color_scheme = SystemConfig::get_by_name(&gql_system.name)
+        let color_scheme = SystemConfig::get_by_name(&system_name)
             .map(|config| ColorScheme {
                 nodes: config.color_scheme.nodes,
                 edges: config.color_scheme.edges,
@@ -331,16 +309,16 @@ impl GraphQLClient {
             });
 
         // Get metadata from legacy config for display name and description
-        let (display_name, k_notation, description) = SystemConfig::get_by_name(&gql_system.name)
+        let (display_name, k_notation, description) = SystemConfig::get_by_name(&system_name)
             .map(|config| (config.display_name, config.k_notation, config.description))
             .unwrap_or_else(|| {
                 let k_notation = format!("K{}", node_count);
-                let display_name = capitalize_first(&gql_system.name);
-                (display_name, k_notation, gql_system.name.clone())
+                let display_name = capitalize_first(&system_name);
+                (display_name, k_notation, system_name.clone())
             });
 
-        // Convert coordinates
-        let coordinates: Vec<Coordinate> = gql_system.geometry.coordinates
+        // Convert coordinates (points in the API)
+        let raw_coordinates: Vec<Coordinate> = gql_system.points
             .iter()
             .map(|c| Coordinate {
                 x: c.x,
@@ -349,8 +327,11 @@ impl GraphQLClient {
             })
             .collect();
 
+        // Transform coordinates to fit in 800x800 viewport with margins
+        let coordinates = transform_coordinates_to_viewport(raw_coordinates, 800.0, 800.0, 100.0);
+
         // Convert edges
-        let edges: Vec<TopologyEdge> = gql_system.topology.edges
+        let edges: Vec<TopologyEdge> = gql_system.edges
             .iter()
             .map(|e| TopologyEdge {
                 from: e.from,
@@ -358,26 +339,26 @@ impl GraphQLClient {
             })
             .collect();
 
-        // Get indexes from topology nodes
-        let indexes: Vec<usize> = gql_system.topology.nodes
+        // Convert nodes (array of i32) to indexes (array of usize)
+        let indexes: Vec<usize> = gql_system.nodes
             .iter()
-            .map(|n| n.index)
+            .map(|&n| n as usize)
             .collect();
 
-        // Convert terms (term characters)
-        let terms: Vec<String> = gql_system.terms
+        // Extract term names from Term objects
+        let terms: Vec<String> = gql_system.term_characters
             .iter()
             .map(|t| t.name.clone())
             .collect();
 
         // Convert connectors (connective characters)
-        let connectives: Vec<(String, String, String)> = gql_system.connectors
+        let connectives: Vec<(String, String, String)> = gql_system.connective_characters
             .iter()
-            .map(|c| (c.name.clone(), c.from.clone(), c.to.clone()))
+            .map(|c| (c.name.clone(), c.from_term.clone(), c.to_term.clone()))
             .collect();
 
         SystemData {
-            system_name: gql_system.name,
+            system_name,
             display_name,
             k_notation,
             description,
@@ -390,6 +371,81 @@ impl GraphQLClient {
             connectives,
         }
     }
+}
+
+/// Transform coordinates from API space to viewport space
+///
+/// The API may return coordinates in any scale (e.g., 0-1, 0-10, or even 0,0,0 for single points).
+/// This function scales and centers them to fit within the viewport with margins.
+fn transform_coordinates_to_viewport(
+    coords: Vec<Coordinate>,
+    viewport_width: f64,
+    viewport_height: f64,
+    margin: f64,
+) -> Vec<Coordinate> {
+    if coords.is_empty() {
+        return coords;
+    }
+
+    // For a single point, center it in the viewport
+    if coords.len() == 1 {
+        return vec![Coordinate {
+            x: viewport_width / 2.0,
+            y: viewport_height / 2.0,
+            z: coords[0].z,
+        }];
+    }
+
+    // Find bounding box to determine scale
+    let mut min_x = f64::INFINITY;
+    let mut max_x = f64::NEG_INFINITY;
+    let mut min_y = f64::INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+
+    for coord in &coords {
+        min_x = min_x.min(coord.x);
+        max_x = max_x.max(coord.x);
+        min_y = min_y.min(coord.y);
+        max_y = max_y.max(coord.y);
+    }
+
+    // Calculate the full extent needed to contain all points
+    // Use the center of bounding box as origin, and max extent for scaling
+    let center_x = (min_x + max_x) / 2.0;
+    let center_y = (min_y + max_y) / 2.0;
+
+    let extent_x = (max_x - min_x).max(0.0001);
+    let extent_y = (max_y - min_y).max(0.0001);
+
+    // Use the larger extent for both axes to preserve aspect ratio and coordinate system
+    let max_extent = extent_x.max(extent_y);
+
+    // Calculate available space (viewport minus margins on both sides)
+    let available_width = viewport_width - 2.0 * margin;
+    let available_height = viewport_height - 2.0 * margin;
+
+    // Use smaller dimension to ensure graph fits in viewport
+    let available_size = available_width.min(available_height);
+
+    // Scale to fit available space
+    let scale = available_size / max_extent;
+
+    // Viewport center
+    let viewport_center_x = viewport_width / 2.0;
+    let viewport_center_y = viewport_height / 2.0;
+
+    // Transform all coordinates:
+    // 1. Translate to center at origin
+    // 2. Scale
+    // 3. Translate to viewport center
+    coords
+        .into_iter()
+        .map(|coord| Coordinate {
+            x: (coord.x - center_x) * scale + viewport_center_x,
+            y: (coord.y - center_y) * scale + viewport_center_y,
+            z: coord.z,
+        })
+        .collect()
 }
 
 /// Helper function to capitalize the first letter
