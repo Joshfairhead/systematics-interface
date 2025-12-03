@@ -58,7 +58,7 @@ impl Component for ApiGraphView {
             <div class="graph-view">
                 <svg
                     class="graph-svg"
-                    viewBox="0 0 800 800"
+                    viewBox="0 0 1600 900"
                     preserveAspectRatio="xMidYMid meet"
                 >
                     { self.render_edges(&system.edges, &system.coordinates, system) }
@@ -70,6 +70,15 @@ impl Component for ApiGraphView {
 }
 
 impl ApiGraphView {
+    // Scale coordinates from 800x800 to 1600x900 viewBox
+    fn scale_x(x: f64) -> f64 {
+        x * 2.0  // 800 -> 1600
+    }
+
+    fn scale_y(y: f64) -> f64 {
+        y * 1.125  // 800 -> 900
+    }
+
     fn render_edges(
         &self,
         edges: &[TopologyEdge],
@@ -101,10 +110,10 @@ impl ApiGraphView {
 
             html! {
                 <line
-                    x1={ from_node.x.to_string() }
-                    y1={ from_node.y.to_string() }
-                    x2={ to_node.x.to_string() }
-                    y2={ to_node.y.to_string() }
+                    x1={ Self::scale_x(from_node.x).to_string() }
+                    y1={ Self::scale_y(from_node.y).to_string() }
+                    x2={ Self::scale_x(to_node.x).to_string() }
+                    y2={ Self::scale_y(to_node.y).to_string() }
                     stroke={ stroke.clone() }
                     stroke-width={ stroke_width.to_string() }
                     class="edge"
@@ -133,8 +142,8 @@ impl ApiGraphView {
             html! {
                 <g class="node" onclick={ onclick }>
                     <circle
-                        cx={ coord.x.to_string() }
-                        cy={ coord.y.to_string() }
+                        cx={ Self::scale_x(coord.x).to_string() }
+                        cy={ Self::scale_y(coord.y).to_string() }
                         r={ radius.to_string() }
                         fill={ fill.clone() }
                         stroke="white"
@@ -142,8 +151,8 @@ impl ApiGraphView {
                         style="cursor: pointer;"
                     />
                     <text
-                        x={ coord.x.to_string() }
-                        y={ coord.y.to_string() }
+                        x={ Self::scale_x(coord.x).to_string() }
+                        y={ Self::scale_y(coord.y).to_string() }
                         text-anchor="middle"
                         dominant-baseline="middle"
                         fill="white"
