@@ -437,12 +437,13 @@ fn transform_coordinates_to_viewport(
     // Transform all coordinates:
     // 1. Translate to center at origin
     // 2. Scale
-    // 3. Translate to viewport center
+    // 3. Flip Y-axis (mathematical coords: y+ = up, SVG coords: y+ = down)
+    // 4. Translate to viewport center
     coords
         .into_iter()
         .map(|coord| Coordinate {
             x: (coord.x - center_x) * scale + viewport_center_x,
-            y: (coord.y - center_y) * scale + viewport_center_y,
+            y: -(coord.y - center_y) * scale + viewport_center_y,  // Negate Y for SVG
             z: coord.z,
         })
         .collect()
