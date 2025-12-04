@@ -139,6 +139,9 @@ impl ApiGraphView {
 
             let onclick = ctx.link().callback(move |_| ApiGraphMsg::NodeClicked(idx));
 
+            // Get vocabulary term for this node if available
+            let term = system.terms.get(idx).map(|s| s.as_str()).unwrap_or("");
+
             html! {
                 <g class="node" onclick={ onclick }>
                     <circle
@@ -160,6 +163,19 @@ impl ApiGraphView {
                     >
                         { idx }
                     </text>
+                    // Render vocabulary label if available
+                    if !term.is_empty() {
+                        <text
+                            x={ Self::scale_x(coord.x).to_string() }
+                            y={ (Self::scale_y(coord.y) + radius + 16.0).to_string() }
+                            text-anchor="middle"
+                            dominant-baseline="middle"
+                            fill="#333"
+                            style="font-size: 14px; font-weight: 500; pointer-events: none; user-select: none;"
+                        >
+                            { term }
+                        </text>
+                    }
                 </g>
             }
         }).collect::<Html>()
