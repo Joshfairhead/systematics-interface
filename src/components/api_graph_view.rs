@@ -58,7 +58,7 @@ impl Component for ApiGraphView {
             <div class="graph-view">
                 <svg
                     class="graph-svg"
-                    viewBox="0 0 1600 900"
+                    viewBox="0 0 800 800"
                     preserveAspectRatio="xMidYMid meet"
                 >
                     { self.render_edges(&system.edges, &system.coordinates, system) }
@@ -70,13 +70,13 @@ impl Component for ApiGraphView {
 }
 
 impl ApiGraphView {
-    // Scale coordinates from 800x800 to 1600x900 viewBox
+    // No scaling needed - use coordinates directly
     fn scale_x(x: f64) -> f64 {
-        x * 2.0  // 800 -> 1600
+        x
     }
 
     fn scale_y(y: f64) -> f64 {
-        y * 1.125  // 800 -> 900
+        y
     }
 
     fn render_edges(
