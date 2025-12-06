@@ -170,9 +170,9 @@ impl ApiGraphView {
             let angle = dy.atan2(dx) * 180.0 / std::f64::consts::PI;
 
             // Adjust angle to keep text readable (not upside down)
-            // For angles pointing left (90 to 270 degrees), we need to flip
-            let rotation_angle = if angle.abs() > 90.0 {
-                angle - 180.0
+            // If angle is between 90 and 270 degrees (pointing left), flip by 180
+            let rotation_angle = if angle > 90.0 || angle < -90.0 {
+                angle + 180.0
             } else {
                 angle
             };
@@ -203,10 +203,11 @@ impl ApiGraphView {
 
             if is_diagonal && near_center {
                 // For tetrad crossing edges, offset alternately
+                // Use edge index to determine offset direction
                 if edge_idx % 2 == 0 {
-                    mid_y -= 20.0; // Move first crossing edge up
+                    mid_y -= 25.0; // Move first crossing edge up more
                 } else {
-                    mid_x += 20.0; // Move second crossing edge right
+                    mid_y += 25.0; // Move second crossing edge down
                 }
             }
 
