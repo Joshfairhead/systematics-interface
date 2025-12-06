@@ -107,6 +107,7 @@ body {
 }
 
 .graph-view {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -220,7 +221,65 @@ body {
     opacity: 0.3;
 }
 
+/* Graph Controls Container */
+.graph-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+}
+
+/* Toggle Control - Glassmorphic styling */
+.control-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    box-shadow:
+        0 4px 12px rgba(163, 177, 198, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.control-toggle:hover {
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow:
+        0 6px 16px rgba(163, 177, 198, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+}
+
+.control-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+
+.control-toggle span {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #4a5568;
+}
+
 @media (max-width: 768px) {
+    .graph-controls {
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+
+    .control-toggle {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
     .nav-items {
         gap: 0.4rem;
         justify-content: center;
