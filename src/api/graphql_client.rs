@@ -48,7 +48,7 @@ struct GQLSystem {
     #[serde(rename = "connectiveDesignation")]
     connective_designation: String,
     source: String,
-    nodes: Vec<i32>,  // Just array of integers
+    nodes: Vec<i32>,  // Now one-based indices from API (1, 2, 3...)
     edges: Vec<GQLEdge>,
     points: Vec<GQLCoordinate>,
     lines: Vec<GQLLine>,
@@ -56,6 +56,15 @@ struct GQLSystem {
     term_characters: Vec<GQLTerm>,  // Array of Term objects
     #[serde(rename = "connectiveCharacters")]
     connective_characters: Vec<GQLConnector>,
+    #[serde(rename = "navigationEdges")]
+    navigation_edges: Vec<GQLNavigationEdge>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct GQLNavigationEdge {
+    node: i32,  // One-based node number
+    #[serde(rename = "targetSystem")]
+    target_system: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -81,8 +90,8 @@ struct GQLNode {
 
 #[derive(Deserialize, Debug, Clone)]
 struct GQLEdge {
-    from: usize,
-    to: usize,
+    from: i32,  // One-based from API (1, 2, 3...)
+    to: i32,    // One-based from API (1, 2, 3...)
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -166,6 +175,10 @@ impl GraphQLClient {
                         fromTerm
                         toTerm
                     }
+                    navigationEdges {
+                        node
+                        targetSystem
+                    }
                 }
             }
         "#;
@@ -232,6 +245,10 @@ impl GraphQLClient {
                         name
                         fromTerm
                         toTerm
+                    }
+                    navigationEdges {
+                        node
+                        targetSystem
                     }
                 }
             }
@@ -330,19 +347,24 @@ impl GraphQLClient {
         // Transform coordinates to fit in 800x800 viewport with margins
         let coordinates = transform_coordinates_to_viewport(raw_coordinates, 800.0, 800.0, 100.0);
 
-        // Convert edges
+        // Convert edges from one-based (API) to zero-based (internal)
+        // API returns edges with from/to as 1, 2, 3...
+        // Internally we need 0, 1, 2... for array indexing
         let edges: Vec<TopologyEdge> = gql_system.edges
             .iter()
+            .filter(|e| e.from > 0 && e.to > 0)  // Validate one-based indices
             .map(|e| TopologyEdge {
-                from: e.from,
-                to: e.to,
+                from: (e.from - 1) as usize,  // Convert to zero-based
+                to: (e.to - 1) as usize,      // Convert to zero-based
             })
             .collect();
 
-        // Convert nodes (array of i32) to indexes (array of usize)
+        // Convert nodes from one-based (API) to zero-based (internal)
+        // API returns nodes as [1, 2, 3, ...], we store as [0, 1, 2, ...]
         let indexes: Vec<usize> = gql_system.nodes
             .iter()
-            .map(|&n| n as usize)
+            .filter(|&&n| n > 0)  // Validate one-based indices
+            .map(|&n| (n - 1) as usize)  // Convert to zero-based
             .collect();
 
         // Extract term names from Term objects
@@ -357,6 +379,16 @@ impl GraphQLClient {
             .map(|c| (c.name.clone(), c.from_term.clone(), c.to_term.clone()))
             .collect();
 
+        // Convert navigation edges from one-based (API) to zero-based (internal)
+        let navigation_edges: Vec<crate::api::models::NavigationEdge> = gql_system.navigation_edges
+            .iter()
+            .filter(|e| e.node > 0)  // Validate one-based indices
+            .map(|e| crate::api::models::NavigationEdge {
+                node: (e.node - 1) as usize,  // Convert to zero-based for array indexing
+                target_system: e.target_system.clone(),
+            })
+            .collect();
+
         SystemData {
             system_name,
             display_name,
@@ -369,6 +401,7 @@ impl GraphQLClient {
             color_scheme,
             terms,
             connectives,
+            navigation_edges,
         }
     }
 }
