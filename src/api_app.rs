@@ -7,11 +7,18 @@ use crate::components::api_graph_view::ApiGraphView;
 use crate::components::system_selector::SystemSelector;
 use crate::core::system_config::SystemConfig;
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Breadcrumb {
+    pub system_name: String,
+}
+
 pub enum ApiAppMsg {
     SelectSystem(String),
     SystemsLoaded(Vec<SystemData>),
     SystemLoaded(SystemData),
     LoadError(String),
+    NavigateToSystem(String),
+    NavigateBack,
 }
 
 pub struct ApiApp {
@@ -21,6 +28,7 @@ pub struct ApiApp {
     error: Option<String>,
     graphql_client: Option<GraphQLClient>,
     use_graphql: bool,
+    breadcrumbs: Vec<Breadcrumb>,
 }
 
 impl Component for ApiApp {
@@ -74,12 +82,15 @@ impl Component for ApiApp {
             error: None,
             graphql_client,
             use_graphql,
+            breadcrumbs: vec![],
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             ApiAppMsg::SelectSystem(name) => {
+                // Clear breadcrumbs when manually selecting from sidebar
+                self.breadcrumbs.clear();
                 self.loading = true;
                 self.error = None;
 
@@ -111,6 +122,80 @@ impl Component for ApiApp {
 
                 true
             }
+            ApiAppMsg::NavigateToSystem(name) => {
+                // Add current system to breadcrumbs before navigating
+                if let Some(ref current) = self.selected_system {
+                    self.breadcrumbs.push(Breadcrumb {
+                        system_name: current.system_name.clone(),
+                    });
+                }
+
+                self.loading = true;
+                self.error = None;
+
+                // Fetch the target system
+                let link = ctx.link().clone();
+                let use_gql = self.use_graphql;
+                let client = self.graphql_client.clone();
+
+                spawn_local(async move {
+                    let result = if use_gql {
+                        if let Some(client) = client {
+                            client.fetch_system(&name).await
+                        } else {
+                            MockApiClient::fetch_system(&name).await
+                        }
+                    } else {
+                        MockApiClient::fetch_system(&name).await
+                    };
+
+                    match result {
+                        Ok(system) => {
+                            link.send_message(ApiAppMsg::SystemLoaded(system));
+                        }
+                        Err(e) => {
+                            link.send_message(ApiAppMsg::LoadError(e.to_string()));
+                        }
+                    }
+                });
+
+                true
+            }
+            ApiAppMsg::NavigateBack => {
+                if let Some(breadcrumb) = self.breadcrumbs.pop() {
+                    self.loading = true;
+                    self.error = None;
+
+                    // Fetch the previous system
+                    let link = ctx.link().clone();
+                    let use_gql = self.use_graphql;
+                    let client = self.graphql_client.clone();
+                    let name = breadcrumb.system_name;
+
+                    spawn_local(async move {
+                        let result = if use_gql {
+                            if let Some(client) = client {
+                                client.fetch_system(&name).await
+                            } else {
+                                MockApiClient::fetch_system(&name).await
+                            }
+                        } else {
+                            MockApiClient::fetch_system(&name).await
+                        };
+
+                        match result {
+                            Ok(system) => {
+                                link.send_message(ApiAppMsg::SystemLoaded(system));
+                            }
+                            Err(e) => {
+                                link.send_message(ApiAppMsg::LoadError(e.to_string()));
+                            }
+                        }
+                    });
+                }
+
+                true
+            }
             ApiAppMsg::SystemsLoaded(systems) => {
                 self.loading = false;
 
@@ -137,6 +222,8 @@ impl Component for ApiApp {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let on_select = ctx.link().callback(ApiAppMsg::SelectSystem);
+        let on_navigate = ctx.link().callback(ApiAppMsg::NavigateToSystem);
+        let on_back = ctx.link().callback(|_| ApiAppMsg::NavigateBack);
 
         html! {
             <div class="app">
@@ -180,6 +267,28 @@ impl Component for ApiApp {
                     </aside>
 
                     <main class="main-view">
+                        // Breadcrumb trail
+                        if !self.breadcrumbs.is_empty() {
+                            <nav class="breadcrumbs">
+                                { for self.breadcrumbs.iter().map(|crumb| {
+                                    html! {
+                                        <span class="breadcrumb">
+                                            { &crumb.system_name }
+                                            { " > " }
+                                        </span>
+                                    }
+                                })}
+                                if let Some(ref system) = self.selected_system {
+                                    <span class="breadcrumb-current">
+                                        { &system.system_name }
+                                    </span>
+                                }
+                                <button class="breadcrumb-back" onclick={ on_back }>
+                                    { "← Back" }
+                                </button>
+                            </nav>
+                        }
+
                         {
                             if let Some(ref error) = self.error {
                                 html! {
@@ -191,7 +300,12 @@ impl Component for ApiApp {
                             } else if self.loading {
                                 html! { <div class="loading">{"Loading system..."}</div> }
                             } else if let Some(ref system) = self.selected_system {
-                                html! { <ApiGraphView system={ system.clone() } /> }
+                                html! {
+                                    <ApiGraphView
+                                        system={ system.clone() }
+                                        on_navigate={ Some(on_navigate) }
+                                    />
+                                }
                             } else {
                                 html! { <div class="loading">{"Select a system"}</div> }
                             }

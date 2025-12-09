@@ -21,6 +21,8 @@ type System {
   geometry: Geometry!
   terms: [Term!]!
   connectors: [Connector!]!
+  navigationEdges: [NavigationEdge!]!
+  navigationTarget(nodeNumber: Int!): String
 }
 
 type Topology {
@@ -71,6 +73,8 @@ type Line {
 type Term {
   name: String!
   system: String!
+  systemName: String!
+  node: Int!
   nodeIndex: Int!
   coordinate: Coordinate
 }
@@ -85,4 +89,9 @@ type ConnectiveCharacter {
   name: String!
   from: String!
   to: String!
+}
+
+type NavigationEdge {
+  node: Int!
+  targetSystem: String!
 }

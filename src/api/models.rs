@@ -61,6 +61,13 @@ impl VocabularyData {
     }
 }
 
+/// Navigation edge for node-based system navigation
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NavigationEdge {
+    pub node: usize,          // Zero-based internally
+    pub target_system: String,
+}
+
 /// Complete system data combining topology, geometry, and vocabulary
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SystemData {
@@ -78,6 +85,9 @@ pub struct SystemData {
     /// Connective characters from vocabulary
     #[serde(default)]
     pub connectives: Vec<(String, String, String)>,
+    /// Navigation edges for node-based system navigation
+    #[serde(default)]
+    pub navigation_edges: Vec<NavigationEdge>,
 }
 
 /// Color scheme for rendering
@@ -116,6 +126,7 @@ impl SystemData {
             color_scheme,
             terms: vocabulary.term_characters,
             connectives: vocabulary.connective_characters,
+            navigation_edges: vec![],  // Empty by default, filled by GraphQL client
         }
     }
 

@@ -4,6 +4,8 @@ use crate::api::models::{SystemData, Coordinate, TopologyEdge};
 #[derive(Properties, PartialEq)]
 pub struct ApiGraphViewProps {
     pub system: SystemData,
+    #[prop_or_default]
+    pub on_navigate: Option<Callback<String>>,
 }
 
 pub enum ApiGraphMsg {
@@ -30,14 +32,24 @@ impl Component for ApiGraphView {
         }
     }
 
-    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             ApiGraphMsg::NodeClicked(idx) => {
-                if self.selected_node == Some(idx) {
-                    self.selected_node = None;
+                // Check if this node has a navigation target
+                let system = &ctx.props().system;
+                if let Some(nav_edge) = system.navigation_edges.iter().find(|e| e.node == idx) {
+                    // Navigate to the target system
+                    if let Some(ref callback) = ctx.props().on_navigate {
+                        callback.emit(nav_edge.target_system.clone());
+                    }
                 } else {
-                    self.selected_node = Some(idx);
-                    self.selected_edge = None;
+                    // No navigation target, just select/deselect
+                    if self.selected_node == Some(idx) {
+                        self.selected_node = None;
+                    } else {
+                        self.selected_node = Some(idx);
+                        self.selected_edge = None;
+                    }
                 }
                 true
             }
@@ -161,7 +173,7 @@ impl ApiGraphView {
             let to_node = &coordinates[edge.to];
 
             // Calculate midpoint of the edge for label placement
-            let mut mid_x = (from_node.x + to_node.x) / 2.0;
+            let mid_x = (from_node.x + to_node.x) / 2.0;
             let mut mid_y = (from_node.y + to_node.y) / 2.0;
 
             // Calculate angle of the edge for label rotation
@@ -285,7 +297,7 @@ impl ApiGraphView {
                         fill="white"
                         style="font-size: 12px; font-weight: bold; pointer-events: none; user-select: none;"
                     >
-                        { idx }
+                        { idx + 1 }
                     </text>
                     // Render vocabulary label if available
                     if !term.is_empty() {
