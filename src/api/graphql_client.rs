@@ -111,6 +111,7 @@ struct GQLLine {
 struct GQLTerm {
     name: String,
     node: i32,
+    coordinate: Option<GQLCoordinate>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -169,6 +170,11 @@ impl GraphQLClient {
                     termCharacters {
                         name
                         node
+                        coordinate {
+                            x
+                            y
+                            z
+                        }
                     }
                     connectiveCharacters {
                         name
@@ -240,6 +246,11 @@ impl GraphQLClient {
                     termCharacters {
                         name
                         node
+                        coordinate {
+                            x
+                            y
+                            z
+                        }
                     }
                     connectiveCharacters {
                         name
@@ -334,13 +345,26 @@ impl GraphQLClient {
                 (display_name, k_notation, system_name.clone())
             });
 
-        // Convert coordinates (points in the API)
-        let raw_coordinates: Vec<Coordinate> = gql_system.points
+        // Convert coordinates from termCharacters (sorted by node index to maintain order)
+        // termCharacters array has coordinates paired with each term
+        let mut terms_with_coords: Vec<_> = gql_system.term_characters
             .iter()
-            .map(|c| Coordinate {
-                x: c.x,
-                y: c.y,
-                z: c.z,
+            .filter(|t| t.node > 0)  // Validate one-based indices
+            .map(|t| (t.node, t.coordinate.clone()))
+            .collect();
+
+        // Sort by node index to ensure correct ordering
+        terms_with_coords.sort_by_key(|(node, _)| *node);
+
+        let raw_coordinates: Vec<Coordinate> = terms_with_coords
+            .iter()
+            .map(|(_, coord_opt)| {
+                // Use coordinate from termCharacter if available, otherwise default to origin
+                coord_opt.as_ref().map(|c| Coordinate {
+                    x: c.x,
+                    y: c.y,
+                    z: c.z,
+                }).unwrap_or(Coordinate { x: 0.0, y: 0.0, z: None })
             })
             .collect();
 
@@ -367,8 +391,14 @@ impl GraphQLClient {
             .map(|&n| (n - 1) as usize)  // Convert to zero-based
             .collect();
 
-        // Extract term names from Term objects
-        let terms: Vec<String> = gql_system.term_characters
+        // Extract term names from Term objects (sorted by node index)
+        let mut terms_sorted: Vec<_> = gql_system.term_characters
+            .iter()
+            .filter(|t| t.node > 0)  // Validate one-based indices
+            .collect();
+        terms_sorted.sort_by_key(|t| t.node);
+
+        let terms: Vec<String> = terms_sorted
             .iter()
             .map(|t| t.name.clone())
             .collect();
