@@ -48,6 +48,7 @@ struct GQLSystem {
     #[serde(rename = "connectiveDesignation")]
     connective_designation: String,
     source: String,
+    color: Option<String>,
     nodes: Vec<i32>,  // Now one-based indices from API (1, 2, 3...)
     edges: Vec<GQLEdge>,
     points: Vec<GQLCoordinate>,
@@ -110,8 +111,11 @@ struct GQLLine {
 #[derive(Deserialize, Debug, Clone)]
 struct GQLTerm {
     name: String,
-    node: i32,
+    index: i32,
     coordinate: Option<GQLCoordinate>,
+    color: Option<String>,
+    #[serde(rename = "hexColor")]
+    hex_color: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -145,6 +149,7 @@ impl GraphQLClient {
                     termDesignation
                     connectiveDesignation
                     source
+                    color
                     nodes
                     edges {
                         from
@@ -169,7 +174,9 @@ impl GraphQLClient {
                     }
                     termCharacters {
                         name
-                        node
+                        index
+                        color
+                        hexColor
                         coordinate {
                             x
                             y
@@ -221,6 +228,7 @@ impl GraphQLClient {
                     termDesignation
                     connectiveDesignation
                     source
+                    color
                     nodes
                     edges {
                         from
@@ -245,7 +253,9 @@ impl GraphQLClient {
                     }
                     termCharacters {
                         name
-                        node
+                        index
+                        color
+                        hexColor
                         coordinate {
                             x
                             y
@@ -321,20 +331,31 @@ impl GraphQLClient {
         // Convert system name to lowercase for consistency
         let system_name = gql_system.name.to_lowercase();
 
-        // Get color scheme from legacy config or use default
-        let color_scheme = SystemConfig::get_by_name(&system_name)
-            .map(|config| ColorScheme {
-                nodes: config.color_scheme.nodes,
-                edges: config.color_scheme.edges,
-                selected_node: config.color_scheme.selected_node,
-                selected_edge: config.color_scheme.selected_edge,
-            })
-            .unwrap_or_else(|| ColorScheme {
-                nodes: "#4A90E2".to_string(),
+        // Get color scheme - prioritize API color, then legacy config, then default
+        let color_scheme = if let Some(api_color) = &gql_system.color {
+            // Use color from API
+            ColorScheme {
+                nodes: api_color.clone(),
                 edges: "#888888".to_string(),
                 selected_node: "#FF6B6B".to_string(),
                 selected_edge: "#FF6B6B".to_string(),
-            });
+            }
+        } else {
+            // Fall back to legacy config or default
+            SystemConfig::get_by_name(&system_name)
+                .map(|config| ColorScheme {
+                    nodes: config.color_scheme.nodes,
+                    edges: config.color_scheme.edges,
+                    selected_node: config.color_scheme.selected_node,
+                    selected_edge: config.color_scheme.selected_edge,
+                })
+                .unwrap_or_else(|| ColorScheme {
+                    nodes: "#4A90E2".to_string(),
+                    edges: "#888888".to_string(),
+                    selected_node: "#FF6B6B".to_string(),
+                    selected_edge: "#FF6B6B".to_string(),
+                })
+        };
 
         // Get metadata from legacy config for display name and description
         let (display_name, k_notation, description) = SystemConfig::get_by_name(&system_name)
@@ -345,16 +366,16 @@ impl GraphQLClient {
                 (display_name, k_notation, system_name.clone())
             });
 
-        // Convert coordinates from termCharacters (sorted by node index to maintain order)
+        // Convert coordinates from termCharacters (sorted by index to maintain order)
         // termCharacters array has coordinates paired with each term
         let mut terms_with_coords: Vec<_> = gql_system.term_characters
             .iter()
-            .filter(|t| t.node > 0)  // Validate one-based indices
-            .map(|t| (t.node, t.coordinate.clone()))
+            .filter(|t| t.index > 0)  // Validate one-based indices
+            .map(|t| (t.index, t.coordinate.clone()))
             .collect();
 
-        // Sort by node index to ensure correct ordering
-        terms_with_coords.sort_by_key(|(node, _)| *node);
+        // Sort by index to ensure correct ordering
+        terms_with_coords.sort_by_key(|(index, _)| *index);
 
         let raw_coordinates: Vec<Coordinate> = terms_with_coords
             .iter()
@@ -391,16 +412,29 @@ impl GraphQLClient {
             .map(|&n| (n - 1) as usize)  // Convert to zero-based
             .collect();
 
-        // Extract term names from Term objects (sorted by node index)
+        // Extract term names from Term objects (sorted by index)
         let mut terms_sorted: Vec<_> = gql_system.term_characters
             .iter()
-            .filter(|t| t.node > 0)  // Validate one-based indices
+            .filter(|t| t.index > 0)  // Validate one-based indices
             .collect();
-        terms_sorted.sort_by_key(|t| t.node);
+        terms_sorted.sort_by_key(|t| t.index);
 
         let terms: Vec<String> = terms_sorted
             .iter()
             .map(|t| t.name.clone())
+            .collect();
+
+        // Extract term colors (sorted by index, with fallback to system color or default)
+        // Use hexColor for rendering (proper hex codes), fallback to color name, then default
+        let default_color = gql_system.color.as_deref().unwrap_or("#4A90E2");
+        let term_colors: Vec<String> = terms_sorted
+            .iter()
+            .map(|t| {
+                t.hex_color.as_ref()
+                    .or(t.color.as_ref())
+                    .map(|c| c.clone())
+                    .unwrap_or_else(|| default_color.to_string())
+            })
             .collect();
 
         // Convert connectors (connective characters)
@@ -430,6 +464,7 @@ impl GraphQLClient {
             edges,
             color_scheme,
             terms,
+            term_colors,
             connectives,
             navigation_edges,
         }

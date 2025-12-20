@@ -269,7 +269,8 @@ impl ApiGraphView {
             let fill = if is_selected {
                 &system.color_scheme.selected_node
             } else {
-                &system.color_scheme.nodes
+                // Use per-term color if available, otherwise fall back to system color
+                system.term_colors.get(idx).unwrap_or(&system.color_scheme.nodes)
             };
             let radius = if is_selected { 18.0 } else { 12.0 };
 
@@ -295,6 +296,9 @@ impl ApiGraphView {
                         text-anchor="middle"
                         dominant-baseline="middle"
                         fill="white"
+                        stroke="black"
+                        stroke-width="1"
+                        paint-order="stroke"
                         style="font-size: 12px; font-weight: bold; pointer-events: none; user-select: none;"
                     >
                         { idx + 1 }
