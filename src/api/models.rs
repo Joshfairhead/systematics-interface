@@ -82,6 +82,9 @@ pub struct SystemData {
     pub color_scheme: ColorScheme,
     #[serde(default)]
     pub terms: Vec<String>,
+    /// Individual colors for each term/node (indexed by node position)
+    #[serde(default)]
+    pub term_colors: Vec<String>,
     /// Connective characters from vocabulary
     #[serde(default)]
     pub connectives: Vec<(String, String, String)>,
@@ -125,6 +128,7 @@ impl SystemData {
             edges,
             color_scheme,
             terms: vocabulary.term_characters,
+            term_colors: vec![],  // Empty by default, filled by GraphQL client
             connectives: vocabulary.connective_characters,
             navigation_edges: vec![],  // Empty by default, filled by GraphQL client
         }
