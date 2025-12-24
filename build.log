@@ -1,0 +1,162 @@
+2025-12-24T20:40:17.656698Z  INFO 🚀 Starting trunk 0.21.14
+2025-12-24T20:40:17.657035Z  WARN The field `address` in the configuration is deprecated and will be removed in a future version. Migrate to the `addresses` field, which allows adding more than one.    
+2025-12-24T20:40:17.657094Z  INFO 📦 starting build
+2025-12-24T20:40:17.757541Z  INFO spawned hook echo command_arguments=["Building systematics-interface..."]
+2025-12-24T20:40:17.757559Z  INFO spawning hook stage=Build command=echo
+Building systematics-interface...
+2025-12-24T20:40:17.760023Z  INFO finished hook echo
+warning: unused import: `Edge`
+ --> src/components/graph_view.rs:2:62
+  |
+2 | use crate::core::geometry::{GeometryCalculator, GraphLayout, Edge};
+  |                                                              ^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `models::*`
+ --> src/api/mod.rs:5:9
+  |
+5 | pub use models::*;
+  |         ^^^^^^^^^
+
+warning: unused import: `client::ApiClient`
+ --> src/api/mod.rs:6:9
+  |
+6 | pub use client::ApiClient;
+  |         ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `graphql_client::GraphQLClient`
+ --> src/api/mod.rs:7:9
+  |
+7 | pub use graphql_client::GraphQLClient;
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variant `EdgeClicked` is never constructed
+  --> src/components/graph_view.rs:12:5
+   |
+10 | pub enum GraphMsg {
+   |          -------- variant in this enum
+11 |     NodeClicked(usize),
+12 |     EdgeClicked(usize, usize),
+   |     ^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: variant `EdgeClicked` is never constructed
+  --> src/components/api_graph_view.rs:13:5
+   |
+11 | pub enum ApiGraphMsg {
+   |          ----------- variant in this enum
+12 |     NodeClicked(usize),
+13 |     EdgeClicked(usize, usize),
+   |     ^^^^^^^^^^^
+
+warning: method `terms` is never used
+  --> src/api/models.rs:59:12
+   |
+57 | impl VocabularyData {
+   | ------------------- method in this implementation
+58 |     /// Get all terms (for backward compatibility)
+59 |     pub fn terms(&self) -> Vec<String> {
+   |            ^^^^^
+
+warning: associated items `with_complete_graph_edges` and `generate_complete_graph_edges` are never used
+   --> src/api/models.rs:138:12
+    |
+105 | impl SystemData {
+    | --------------- associated items in this implementation
+...
+138 |     pub fn with_complete_graph_edges(mut self) -> Self {
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+145 |     fn generate_complete_graph_edges(node_count: usize) -> Vec<TopologyEdge> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `ApiClient` is never constructed
+ --> src/api/client.rs:7:12
+  |
+7 | pub struct ApiClient {
+  |            ^^^^^^^^^
+
+warning: multiple associated items are never used
+  --> src/api/client.rs:32:12
+   |
+30 | impl ApiClient {
+   | -------------- associated items in this implementation
+31 |     /// Create a new API client with the specified base URL
+32 |     pub fn new(base_url: String) -> Self {
+   |            ^^^
+...
+37 |     pub async fn fetch_geometry(&self, system_name: &str) -> Result<GeometryData, ApiError> {
+   |                  ^^^^^^^^^^^^^^
+...
+43 |     pub async fn fetch_topology(&self, system_name: &str) -> Result<TopologyData, ApiError> {
+   |                  ^^^^^^^^^^^^^^
+...
+49 |     pub async fn fetch_vocabulary(&self, system_name: &str) -> Result<VocabularyData, ApiError> {
+   |                  ^^^^^^^^^^^^^^^^
+...
+55 |     pub async fn fetch_system(&self, system_name: &str) -> Result<SystemData, ApiError> {
+   |                  ^^^^^^^^^^^^
+...
+85 |     pub async fn fetch_all_systems(&self) -> Result<Vec<SystemData>, ApiError> {
+   |                  ^^^^^^^^^^^^^^^^^
+...
+91 |     async fn fetch_json<T: DeserializeOwned>(&self, url: &str) -> Result<T, ApiError> {
+   |              ^^^^^^^^^^
+
+warning: fields `coherence_attribute`, `term_designation`, `connective_designation`, `source`, `color`, and `lines` are never read
+  --> src/api/graphql_client.rs:45:5
+   |
+42 | struct GQLSystem {
+   |        --------- fields in this struct
+...
+45 |     coherence_attribute: String,
+   |     ^^^^^^^^^^^^^^^^^^^
+46 |     #[serde(rename = "termDesignation")]
+47 |     term_designation: String,
+   |     ^^^^^^^^^^^^^^^^
+48 |     #[serde(rename = "connectiveDesignation")]
+49 |     connective_designation: String,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+50 |     source: String,
+   |     ^^^^^^
+51 |     color: String,  // System color name
+   |     ^^^^^
+...
+55 |     lines: Vec<GQLLine>,
+   |     ^^^^^
+   |
+   = note: `GQLSystem` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `start` and `end` are never read
+  --> src/api/graphql_client.rs:86:5
+   |
+85 | struct GQLLine {
+   |        ------- fields in this struct
+86 |     start: GQLCoordinate,
+   |     ^^^^^
+87 |     end: GQLCoordinate,
+   |     ^^^
+   |
+   = note: `GQLLine` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `system_name` and `color` are never read
+  --> src/api/graphql_client.rs:94:5
+   |
+91 | struct GQLTerm {
+   |        ------- fields in this struct
+...
+94 |     system_name: String,
+   |     ^^^^^^^^^^^
+95 |     index: i32,  // 1-indexed position
+96 |     color: String,  // Color name (e.g., "Red")
+   |     ^^^^^
+   |
+   = note: `GQLTerm` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `systematics-interface` (lib) generated 13 warnings (run `cargo fix --lib -p systematics-interface` to apply 4 suggestions)
+warning: `systematics-interface` (bin "systematics-interface") generated 13 warnings (13 duplicates)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+2025-12-24T20:40:18.078719Z  INFO applying new distribution
+2025-12-24T20:40:18.079264Z  INFO ✅ success

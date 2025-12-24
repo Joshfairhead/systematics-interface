@@ -1,0 +1,13 @@
+{
+  system(name: "Triad") {
+    name
+    color
+    nodes
+    termCharacters {
+      index
+      name
+      color
+      hexColor
+    }
+  }
+}

@@ -48,13 +48,13 @@ struct GQLSystem {
     #[serde(rename = "connectiveDesignation")]
     connective_designation: String,
     source: String,
-    color: Option<String>,
-    nodes: Vec<i32>,  // Now one-based indices from API (1, 2, 3...)
+    color: String,  // System color name
+    nodes: Vec<i32>,  // 1-indexed node positions
     edges: Vec<GQLEdge>,
     points: Vec<GQLCoordinate>,
     lines: Vec<GQLLine>,
     #[serde(rename = "termCharacters")]
-    term_characters: Vec<GQLTerm>,  // Array of Term objects
+    term_characters: Vec<GQLTerm>,
     #[serde(rename = "connectiveCharacters")]
     connective_characters: Vec<GQLConnector>,
     #[serde(rename = "navigationEdges")]
@@ -66,27 +66,6 @@ struct GQLNavigationEdge {
     node: i32,  // One-based node number
     #[serde(rename = "targetSystem")]
     target_system: String,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct GQLTopology {
-    #[serde(rename = "systemName")]
-    system_name: String,
-    nodes: Vec<GQLNode>,
-    edges: Vec<GQLEdge>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct GQLGeometry {
-    #[serde(rename = "systemName")]
-    system_name: String,
-    coordinates: Vec<GQLCoordinate>,
-    lines: Option<Vec<GQLLine>>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct GQLNode {
-    index: usize,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -111,11 +90,13 @@ struct GQLLine {
 #[derive(Deserialize, Debug, Clone)]
 struct GQLTerm {
     name: String,
-    index: i32,
-    coordinate: Option<GQLCoordinate>,
-    color: Option<String>,
+    #[serde(rename = "systemName")]
+    system_name: String,
+    index: i32,  // 1-indexed position
+    color: String,  // Color name (e.g., "Red")
     #[serde(rename = "hexColor")]
-    hex_color: Option<String>,
+    hex_color: String,  // Hex code (e.g., "#FF0000")
+    coordinate: Option<GQLCoordinate>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -174,6 +155,7 @@ impl GraphQLClient {
                     }
                     termCharacters {
                         name
+                        systemName
                         index
                         color
                         hexColor
@@ -253,6 +235,7 @@ impl GraphQLClient {
                     }
                     termCharacters {
                         name
+                        systemName
                         index
                         color
                         hexColor
@@ -326,36 +309,26 @@ impl GraphQLClient {
 
     /// Convert GraphQL system to internal SystemData model
     fn convert_gql_system_to_system_data(&self, gql_system: GQLSystem) -> SystemData {
+        // Get node count from flat nodes array
         let node_count = gql_system.nodes.len();
 
         // Convert system name to lowercase for consistency
         let system_name = gql_system.name.to_lowercase();
 
-        // Get color scheme - prioritize API color, then legacy config, then default
-        let color_scheme = if let Some(api_color) = &gql_system.color {
-            // Use color from API
-            ColorScheme {
-                nodes: api_color.clone(),
+        // Get default color scheme from legacy config or default
+        let color_scheme = SystemConfig::get_by_name(&system_name)
+            .map(|config| ColorScheme {
+                nodes: config.color_scheme.nodes,
+                edges: config.color_scheme.edges,
+                selected_node: config.color_scheme.selected_node,
+                selected_edge: config.color_scheme.selected_edge,
+            })
+            .unwrap_or_else(|| ColorScheme {
+                nodes: "#4A90E2".to_string(),
                 edges: "#888888".to_string(),
                 selected_node: "#FF6B6B".to_string(),
                 selected_edge: "#FF6B6B".to_string(),
-            }
-        } else {
-            // Fall back to legacy config or default
-            SystemConfig::get_by_name(&system_name)
-                .map(|config| ColorScheme {
-                    nodes: config.color_scheme.nodes,
-                    edges: config.color_scheme.edges,
-                    selected_node: config.color_scheme.selected_node,
-                    selected_edge: config.color_scheme.selected_edge,
-                })
-                .unwrap_or_else(|| ColorScheme {
-                    nodes: "#4A90E2".to_string(),
-                    edges: "#888888".to_string(),
-                    selected_node: "#FF6B6B".to_string(),
-                    selected_edge: "#FF6B6B".to_string(),
-                })
-        };
+            });
 
         // Get metadata from legacy config for display name and description
         let (display_name, k_notation, description) = SystemConfig::get_by_name(&system_name)
@@ -366,35 +339,42 @@ impl GraphQLClient {
                 (display_name, k_notation, system_name.clone())
             });
 
-        // Convert coordinates from termCharacters (sorted by index to maintain order)
-        // termCharacters array has coordinates paired with each term
-        let mut terms_with_coords: Vec<_> = gql_system.term_characters
+        // Sort terms by index to maintain consistent ordering
+        let mut terms_sorted: Vec<_> = gql_system.term_characters
             .iter()
             .filter(|t| t.index > 0)  // Validate one-based indices
-            .map(|t| (t.index, t.coordinate.clone()))
             .collect();
+        terms_sorted.sort_by_key(|t| t.index);
 
-        // Sort by index to ensure correct ordering
-        terms_with_coords.sort_by_key(|(index, _)| *index);
-
-        let raw_coordinates: Vec<Coordinate> = terms_with_coords
-            .iter()
-            .map(|(_, coord_opt)| {
-                // Use coordinate from termCharacter if available, otherwise default to origin
-                coord_opt.as_ref().map(|c| Coordinate {
+        // Extract coordinates from termCharacters (prefer term.coordinate, fallback to points)
+        let raw_coordinates: Vec<Coordinate> = if terms_sorted.iter().any(|t| t.coordinate.is_some()) {
+            // Use coordinates from termCharacters if available
+            terms_sorted
+                .iter()
+                .map(|t| {
+                    t.coordinate.as_ref().map(|c| Coordinate {
+                        x: c.x,
+                        y: c.y,
+                        z: c.z,
+                    }).unwrap_or(Coordinate { x: 0.0, y: 0.0, z: None })
+                })
+                .collect()
+        } else {
+            // Fall back to points array
+            gql_system.points
+                .iter()
+                .map(|c| Coordinate {
                     x: c.x,
                     y: c.y,
                     z: c.z,
-                }).unwrap_or(Coordinate { x: 0.0, y: 0.0, z: None })
-            })
-            .collect();
+                })
+                .collect()
+        };
 
         // Transform coordinates to fit in 800x800 viewport with margins
         let coordinates = transform_coordinates_to_viewport(raw_coordinates, 800.0, 800.0, 100.0);
 
-        // Convert edges from one-based (API) to zero-based (internal)
-        // API returns edges with from/to as 1, 2, 3...
-        // Internally we need 0, 1, 2... for array indexing
+        // Convert edges from flat array (one-based API to zero-based internal)
         let edges: Vec<TopologyEdge> = gql_system.edges
             .iter()
             .filter(|e| e.from > 0 && e.to > 0)  // Validate one-based indices
@@ -404,40 +384,33 @@ impl GraphQLClient {
             })
             .collect();
 
-        // Convert nodes from one-based (API) to zero-based (internal)
-        // API returns nodes as [1, 2, 3, ...], we store as [0, 1, 2, ...]
+        // Convert nodes from flat array (one-based API to zero-based internal)
         let indexes: Vec<usize> = gql_system.nodes
             .iter()
             .filter(|&&n| n > 0)  // Validate one-based indices
             .map(|&n| (n - 1) as usize)  // Convert to zero-based
             .collect();
 
-        // Extract term names from Term objects (sorted by index)
-        let mut terms_sorted: Vec<_> = gql_system.term_characters
-            .iter()
-            .filter(|t| t.index > 0)  // Validate one-based indices
-            .collect();
-        terms_sorted.sort_by_key(|t| t.index);
-
+        // Extract term names
         let terms: Vec<String> = terms_sorted
             .iter()
             .map(|t| t.name.clone())
             .collect();
 
-        // Extract term colors (sorted by index, with fallback to system color or default)
-        // Use hexColor for rendering (proper hex codes), fallback to color name, then default
-        let default_color = gql_system.color.as_deref().unwrap_or("#4A90E2");
+        // Extract term colors from hexColor field (direct hex codes from API)
+        let default_color = "#4A90E2";
         let term_colors: Vec<String> = terms_sorted
             .iter()
             .map(|t| {
-                t.hex_color.as_ref()
-                    .or(t.color.as_ref())
-                    .map(|c| c.clone())
-                    .unwrap_or_else(|| default_color.to_string())
+                if !t.hex_color.is_empty() {
+                    t.hex_color.clone()
+                } else {
+                    default_color.to_string()
+                }
             })
             .collect();
 
-        // Convert connectors (connective characters)
+        // Convert connectors from connectiveCharacters
         let connectives: Vec<(String, String, String)> = gql_system.connective_characters
             .iter()
             .map(|c| (c.name.clone(), c.from_term.clone(), c.to_term.clone()))
