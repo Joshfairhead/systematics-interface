@@ -13,14 +13,17 @@ type Query {
 
 type System {
   name: String!
-  coherenceAttributes: [String!]!
-  termDesignation: String
-  connectiveDesignation: String
-  source: String
-  topology: Topology!
-  geometry: Geometry!
-  terms: [Term!]!
-  connectors: [Connector!]!
+  coherenceAttribute: String!
+  termDesignation: String!
+  connectiveDesignation: String!
+  source: String!
+  color: String!
+  nodes: [Int!]!
+  edges: [Edge!]!
+  points: [Coordinate!]!
+  lines: [Line!]!
+  termCharacters: [Term!]!
+  connectiveCharacters: [Connector!]!
   navigationEdges: [NavigationEdge!]!
   navigationTarget(nodeNumber: Int!): String
 }
@@ -72,23 +75,18 @@ type Line {
 
 type Term {
   name: String!
-  system: String!
   systemName: String!
-  node: Int!
-  nodeIndex: Int!
+  index: Int!
+  color: String!
+  hexColor: String!
   coordinate: Coordinate
+  system: System
 }
 
 type Connector {
   name: String!
-  from: String!
-  to: String!
-}
-
-type ConnectiveCharacter {
-  name: String!
-  from: String!
-  to: String!
+  fromTerm: String!
+  toTerm: String!
 }
 
 type NavigationEdge {
