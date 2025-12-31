@@ -194,8 +194,8 @@ impl GraphQLClient {
             "octad" => 8,
             "ennead" => 9,
             "decad" => 10,
-            "hendecad" => 11,
-            "duodecad" => 12,
+            "undecad" | "hendecad" => 11,  // Accept both names
+            "dodecad" | "duodecad" => 12,  // Accept both names
             _ => return Err(ApiError::NotFound(format!("Unknown system name: {}", system_name))),
         };
 
@@ -266,9 +266,16 @@ impl GraphQLClient {
 
         web_sys::console::log_1(&format!("Fetched {} systems from allSystems query", data.all_systems.len()).into());
 
-        Ok(data.all_systems.into_iter()
-            .map(|sys| self.convert_gql_system_to_system_data(sys))
-            .collect())
+        let converted_systems: Vec<SystemData> = data.all_systems.into_iter()
+            .map(|sys| {
+                let system_data = self.convert_gql_system_to_system_data(sys);
+                web_sys::console::log_1(&format!("Converted system: {} ({})", system_data.system_name, system_data.display_name).into());
+                system_data
+            })
+            .collect();
+
+        web_sys::console::log_1(&format!("Returning {} converted systems", converted_systems.len()).into());
+        Ok(converted_systems)
     }
 
     /// Execute a GraphQL query

@@ -199,6 +199,11 @@ impl Component for ApiApp {
             ApiAppMsg::SystemsLoaded(systems) => {
                 self.loading = false;
 
+                web_sys::console::log_1(&format!("ApiApp received {} systems", systems.len()).into());
+                for sys in &systems {
+                    web_sys::console::log_1(&format!("  - {} ({})", sys.system_name, sys.display_name).into());
+                }
+
                 // Select the first system by default
                 if let Some(first_system) = systems.first() {
                     self.selected_system = Some(first_system.clone());
