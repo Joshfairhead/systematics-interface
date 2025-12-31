@@ -1,13 +1,46 @@
+# Test query matching actual backend GqlSystemView schema
 {
-  system(name: "Triad") {
+  system(order: 3) {
     name
-    color
-    nodes
-    termCharacters {
-      index
-      name
-      color
-      hexColor
+    coherence
+    termDesignation
+    connectiveDesignation
+    terms {
+      position
+      character {
+        value
+      }
+    }
+    coordinates {
+      position
+      x
+      y
+      z
+    }
+    colours {
+      position
+      value
+    }
+    lines {
+      basePosition
+      targetPosition
+      baseCoordinate {
+        x
+        y
+        z
+      }
+      targetCoordinate {
+        x
+        y
+        z
+      }
+    }
+    connectives {
+      basePosition
+      targetPosition
+      character {
+        value
+      }
     }
   }
 }

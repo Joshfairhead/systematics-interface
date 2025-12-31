@@ -1,0 +1,37 @@
+# GraphQL Introspection Query to discover the actual schema
+{
+  __schema {
+    queryType {
+      name
+      fields {
+        name
+        args {
+          name
+          type {
+            name
+            kind
+          }
+        }
+        type {
+          name
+          kind
+        }
+      }
+    }
+    types {
+      name
+      kind
+      fields {
+        name
+        type {
+          name
+          kind
+          ofType {
+            name
+            kind
+          }
+        }
+      }
+    }
+  }
+}
