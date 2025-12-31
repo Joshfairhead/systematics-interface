@@ -30,10 +30,11 @@ struct SystemQueryResponse {
     system: Option<GQLSystem>,
 }
 
-/// All systems query response (queries systems 1-12)
+/// All systems query response
 #[derive(Deserialize, Debug)]
-struct SystemsQueryResponse {
-    systems: Vec<GQLSystem>,
+struct AllSystemsQueryResponse {
+    #[serde(rename = "allSystems")]
+    all_systems: Vec<GQLSystem>,
 }
 
 /// GraphQL System type (matches GqlSystemView from actual backend)
@@ -55,7 +56,7 @@ struct GQLSystem {
 /// Term with character
 #[derive(Deserialize, Debug, Clone)]
 struct GQLTerm {
-    position: i32,
+    position: Option<i32>,
     character: Option<GQLCharacter>,
 }
 
@@ -68,7 +69,7 @@ struct GQLCharacter {
 /// Coordinate in 3D space
 #[derive(Deserialize, Debug, Clone)]
 struct GQLCoordinate {
-    position: i32,
+    position: Option<i32>,
     x: f64,
     y: f64,
     z: f64,
@@ -77,7 +78,7 @@ struct GQLCoordinate {
 /// Color value
 #[derive(Deserialize, Debug, Clone)]
 struct GQLColour {
-    position: i32,
+    position: Option<i32>,
     value: String,  // Hex color (e.g., "#FF0000")
 }
 
@@ -193,8 +194,8 @@ impl GraphQLClient {
             "octad" => 8,
             "ennead" => 9,
             "decad" => 10,
-            "hendecad" => 11,
-            "duodecad" => 12,
+            "undecad" | "hendecad" => 11,  // Accept both names
+            "dodecad" | "duodecad" => 12,  // Accept both names
             _ => return Err(ApiError::NotFound(format!("Unknown system name: {}", system_name))),
         };
 
@@ -203,24 +204,78 @@ impl GraphQLClient {
 
     /// Fetch all available systems (orders 1-12)
     pub async fn fetch_all_systems(&self) -> Result<Vec<SystemData>, ApiError> {
-        // Query all systems by fetching each order individually
-        let mut systems = Vec::new();
-
-        for order in 1..=12 {
-            match self.fetch_system_by_order(order).await {
-                Ok(system) => systems.push(system),
-                Err(e) => {
-                    // Log warning but continue with other systems
-                    web_sys::console::warn_1(&format!("Failed to fetch system order {}: {:?}", order, e).into());
+        let query = r#"
+            query GetAllSystems {
+                allSystems {
+                    name
+                    coherence
+                    termDesignation
+                    connectiveDesignation
+                    terms {
+                        position
+                        character {
+                            value
+                        }
+                    }
+                    coordinates {
+                        position
+                        x
+                        y
+                        z
+                    }
+                    colours {
+                        position
+                        value
+                    }
+                    lines {
+                        baseCoordinate {
+                            x
+                            y
+                            z
+                        }
+                        targetCoordinate {
+                            x
+                            y
+                            z
+                        }
+                        basePosition
+                        targetPosition
+                    }
+                    connectives {
+                        basePosition
+                        targetPosition
+                        character {
+                            value
+                        }
+                    }
                 }
             }
+        "#;
+
+        let response: GraphQLResponse<AllSystemsQueryResponse> =
+            self.execute_query(query, None).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(ApiError::ParseError(
+                errors.iter().map(|e| e.message.clone()).collect::<Vec<_>>().join(", ")
+            ));
         }
 
-        if systems.is_empty() {
-            return Err(ApiError::NotFound("No systems found".to_string()));
-        }
+        let data = response.data
+            .ok_or_else(|| ApiError::NotFound("No systems found".to_string()))?;
 
-        Ok(systems)
+        web_sys::console::log_1(&format!("Fetched {} systems from allSystems query", data.all_systems.len()).into());
+
+        let converted_systems: Vec<SystemData> = data.all_systems.into_iter()
+            .map(|sys| {
+                let system_data = self.convert_gql_system_to_system_data(sys);
+                web_sys::console::log_1(&format!("Converted system: {} ({})", system_data.system_name, system_data.display_name).into());
+                system_data
+            })
+            .collect();
+
+        web_sys::console::log_1(&format!("Returning {} converted systems", converted_systems.len()).into());
+        Ok(converted_systems)
     }
 
     /// Execute a GraphQL query
@@ -294,14 +349,19 @@ impl GraphQLClient {
                 (display_name, k_notation, desc)
             });
 
-        // Sort coordinates by position
-        let mut coords_sorted = gql_system.coordinates.clone();
-        coords_sorted.sort_by_key(|c| c.position);
+        // Sort coordinates by position (filtering out items without position, then sorting, then using index for missing positions)
+        let mut coords_with_position: Vec<(usize, &GQLCoordinate)> = gql_system.coordinates
+            .iter()
+            .enumerate()
+            .collect();
+
+        // Sort by position if available, otherwise by index
+        coords_with_position.sort_by_key(|(idx, c)| c.position.unwrap_or(*idx as i32));
 
         // Extract raw coordinates
-        let raw_coordinates: Vec<Coordinate> = coords_sorted
+        let raw_coordinates: Vec<Coordinate> = coords_with_position
             .iter()
-            .map(|c| Coordinate {
+            .map(|(_, c)| Coordinate {
                 x: c.x,
                 y: c.y,
                 z: Some(c.z),
@@ -328,30 +388,39 @@ impl GraphQLClient {
         // Create indexes (zero-based sequential indices for all nodes)
         let indexes: Vec<usize> = (0..node_count).collect();
 
-        // Sort terms by position and extract names
-        let mut terms_sorted = gql_system.terms.clone();
-        terms_sorted.sort_by_key(|t| t.position);
-
-        let terms: Vec<String> = terms_sorted
-            .iter()
-            .filter_map(|t| t.character.as_ref().map(|c| c.value.clone()))
+        // Sort terms by position (using index for missing positions) and extract names
+        let mut terms_with_position: Vec<(usize, GQLTerm)> = gql_system.terms
+            .into_iter()
+            .enumerate()
             .collect();
 
-        // Sort colours by position and extract values
-        let mut colours_sorted = gql_system.colours.clone();
-        colours_sorted.sort_by_key(|c| c.position);
+        terms_with_position.sort_by_key(|(idx, t)| t.position.unwrap_or(*idx as i32));
 
-        let term_colors: Vec<String> = colours_sorted
+        let terms: Vec<String> = terms_with_position
             .iter()
-            .map(|c| c.value.clone())
+            .filter_map(|(_, t)| t.character.as_ref().map(|c| c.value.clone()))
+            .collect();
+
+        // Sort colours by position (using index for missing positions) and extract values
+        let mut colours_with_position: Vec<(usize, &GQLColour)> = gql_system.colours
+            .iter()
+            .enumerate()
+            .collect();
+
+        colours_with_position.sort_by_key(|(idx, c)| c.position.unwrap_or(*idx as i32));
+
+        let term_colors: Vec<String> = colours_with_position
+            .iter()
+            .map(|(_, c)| c.value.clone())
             .collect();
 
         // Convert connectives to internal format
         // Build a position->term lookup for connectives
-        let term_by_position: std::collections::HashMap<i32, String> = terms_sorted
+        let term_by_position: std::collections::HashMap<i32, String> = terms_with_position
             .iter()
-            .filter_map(|t| {
-                t.character.as_ref().map(|c| (t.position, c.value.clone()))
+            .filter_map(|(idx, t)| {
+                let pos = t.position.unwrap_or(*idx as i32);
+                t.character.as_ref().map(|c| (pos, c.value.clone()))
             })
             .collect();
 
