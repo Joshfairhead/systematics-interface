@@ -30,10 +30,11 @@ struct SystemQueryResponse {
     system: Option<GQLSystem>,
 }
 
-/// All systems query response (queries systems 1-12)
+/// All systems query response
 #[derive(Deserialize, Debug)]
-struct SystemsQueryResponse {
-    systems: Vec<GQLSystem>,
+struct AllSystemsQueryResponse {
+    #[serde(rename = "allSystems")]
+    all_systems: Vec<GQLSystem>,
 }
 
 /// GraphQL System type (matches GqlSystemView from actual backend)
@@ -203,24 +204,71 @@ impl GraphQLClient {
 
     /// Fetch all available systems (orders 1-12)
     pub async fn fetch_all_systems(&self) -> Result<Vec<SystemData>, ApiError> {
-        // Query all systems by fetching each order individually
-        let mut systems = Vec::new();
-
-        for order in 1..=12 {
-            match self.fetch_system_by_order(order).await {
-                Ok(system) => systems.push(system),
-                Err(e) => {
-                    // Log warning but continue with other systems
-                    web_sys::console::warn_1(&format!("Failed to fetch system order {}: {:?}", order, e).into());
+        let query = r#"
+            query GetAllSystems {
+                allSystems {
+                    name
+                    coherence
+                    termDesignation
+                    connectiveDesignation
+                    terms {
+                        position
+                        character {
+                            value
+                        }
+                    }
+                    coordinates {
+                        position
+                        x
+                        y
+                        z
+                    }
+                    colours {
+                        position
+                        value
+                    }
+                    lines {
+                        baseCoordinate {
+                            x
+                            y
+                            z
+                        }
+                        targetCoordinate {
+                            x
+                            y
+                            z
+                        }
+                        basePosition
+                        targetPosition
+                    }
+                    connectives {
+                        basePosition
+                        targetPosition
+                        character {
+                            value
+                        }
+                    }
                 }
             }
+        "#;
+
+        let response: GraphQLResponse<AllSystemsQueryResponse> =
+            self.execute_query(query, None).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(ApiError::ParseError(
+                errors.iter().map(|e| e.message.clone()).collect::<Vec<_>>().join(", ")
+            ));
         }
 
-        if systems.is_empty() {
-            return Err(ApiError::NotFound("No systems found".to_string()));
-        }
+        let data = response.data
+            .ok_or_else(|| ApiError::NotFound("No systems found".to_string()))?;
 
-        Ok(systems)
+        web_sys::console::log_1(&format!("Fetched {} systems from allSystems query", data.all_systems.len()).into());
+
+        Ok(data.all_systems.into_iter()
+            .map(|sys| self.convert_gql_system_to_system_data(sys))
+            .collect())
     }
 
     /// Execute a GraphQL query
