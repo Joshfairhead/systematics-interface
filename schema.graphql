@@ -1,95 +1,48 @@
+# Actual backend schema (GqlSystemView)
 type Query {
-  system(name: String!): System
-  allSystems: [System!]!
-  systemGeometry(name: String!): Geometry
-  systemTopology(name: String!): Topology
-  systemVocabulary(name: String!): Vocabulary
-  systemMetadata(name: String!): Metadata
-  term(name: String!): Term
-  termsInSystem(systemName: String!): [Term!]!
-  systemsByCoherenceAttribute(attribute: String!): [System!]!
-  systemsByTermDesignation(designation: String!): [System!]!
+  system(order: Int!): GqlSystemView
+  allSystems: [GqlSystemView!]!
+  systemByName(name: String!): GqlSystemView
 }
 
-type System {
-  name: String!
-  coherenceAttribute: String!
-  termDesignation: String!
-  connectiveDesignation: String!
-  source: String!
-  color: String!
-  nodes: [Int!]!
-  edges: [Edge!]!
-  points: [Coordinate!]!
-  lines: [Line!]!
-  termCharacters: [Term!]!
-  connectiveCharacters: [Connector!]!
-  navigationEdges: [NavigationEdge!]!
-  navigationTarget(nodeNumber: Int!): String
+type GqlSystemView {
+  order: Int!
+  name: String
+  coherence: String
+  termDesignation: String
+  connectiveDesignation: String
+  terms: [GqlTerm!]!
+  coordinates: [GqlCoordinate!]!
+  colours: [GqlColour!]!
+  lines: [GqlLink!]!
+  connectives: [GqlLink!]!
 }
 
-type Topology {
-  systemName: String!
-  nodes: [Node!]!
-  edges: [Edge!]!
+type GqlTerm {
+  position: Int!
+  character: GqlCharacter
 }
 
-type Geometry {
-  systemName: String!
-  coordinates: [Coordinate!]!
-  lines: [Line!]!
+type GqlCharacter {
+  value: String!
 }
 
-type Vocabulary {
-  systemName: String!
-  termCharacters: [String!]!
-  connectiveCharacters: [ConnectiveCharacter!]!
-}
-
-type Metadata {
-  systemName: String!
-  kNotation: String!
-  description: String!
-  displayName: String!
-}
-
-type Node {
-  index: Int!
-}
-
-type Edge {
-  from: Int!
-  to: Int!
-}
-
-type Coordinate {
+type GqlCoordinate {
+  position: Int!
   x: Float!
   y: Float!
-  z: Float
+  z: Float!
 }
 
-type Line {
-  start: Coordinate!
-  end: Coordinate!
+type GqlColour {
+  position: Int!
+  value: String!
 }
 
-type Term {
-  name: String!
-  systemName: String!
-  index: Int!
-  color: String!
-  hexColor: String!
-  coordinate: Coordinate
-  system: System
-}
-
-type Connector {
-  name: String!
-  fromTerm: String!
-  toTerm: String!
-}
-
-type NavigationEdge {
-  node: Int!
-  targetSystem: String!
+type GqlLink {
+  basePosition: Int
+  targetPosition: Int
+  baseCoordinate: GqlCoordinate
+  targetCoordinate: GqlCoordinate
+  character: GqlCharacter
 }

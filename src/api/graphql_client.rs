@@ -30,82 +30,69 @@ struct SystemQueryResponse {
     system: Option<GQLSystem>,
 }
 
-/// All systems query response
+/// All systems query response (queries systems 1-12)
 #[derive(Deserialize, Debug)]
-struct AllSystemsQueryResponse {
-    #[serde(rename = "allSystems")]
-    all_systems: Vec<GQLSystem>,
+struct SystemsQueryResponse {
+    systems: Vec<GQLSystem>,
 }
 
-/// GraphQL System type (matches the API schema)
+/// GraphQL System type (matches GqlSystemView from actual backend)
 #[derive(Deserialize, Debug, Clone)]
 struct GQLSystem {
-    name: String,
-    #[serde(rename = "coherenceAttribute")]
-    coherence_attribute: String,
+    name: Option<String>,
+    coherence: Option<String>,
     #[serde(rename = "termDesignation")]
-    term_designation: String,
+    term_designation: Option<String>,
     #[serde(rename = "connectiveDesignation")]
-    connective_designation: String,
-    source: String,
-    color: String,  // System color name
-    nodes: Vec<i32>,  // 1-indexed node positions
-    edges: Vec<GQLEdge>,
-    points: Vec<GQLCoordinate>,
-    lines: Vec<GQLLine>,
-    #[serde(rename = "termCharacters")]
-    term_characters: Vec<GQLTerm>,
-    #[serde(rename = "connectiveCharacters")]
-    connective_characters: Vec<GQLConnector>,
-    #[serde(rename = "navigationEdges")]
-    navigation_edges: Vec<GQLNavigationEdge>,
+    connective_designation: Option<String>,
+    terms: Vec<GQLTerm>,
+    coordinates: Vec<GQLCoordinate>,
+    colours: Vec<GQLColour>,
+    lines: Vec<GQLLink>,
+    connectives: Vec<GQLLink>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-struct GQLNavigationEdge {
-    node: i32,  // One-based node number
-    #[serde(rename = "targetSystem")]
-    target_system: String,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct GQLEdge {
-    from: i32,  // One-based from API (1, 2, 3...)
-    to: i32,    // One-based from API (1, 2, 3...)
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct GQLCoordinate {
-    x: f64,
-    y: f64,
-    z: Option<f64>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct GQLLine {
-    start: GQLCoordinate,
-    end: GQLCoordinate,
-}
-
+/// Term with character
 #[derive(Deserialize, Debug, Clone)]
 struct GQLTerm {
-    name: String,
-    #[serde(rename = "systemName")]
-    system_name: String,
-    index: i32,  // 1-indexed position
-    color: String,  // Color name (e.g., "Red")
-    #[serde(rename = "hexColor")]
-    hex_color: String,  // Hex code (e.g., "#FF0000")
-    coordinate: Option<GQLCoordinate>,
+    position: i32,
+    character: Option<GQLCharacter>,
 }
 
+/// Character value
 #[derive(Deserialize, Debug, Clone)]
-struct GQLConnector {
-    name: String,
-    #[serde(rename = "fromTerm")]
-    from_term: String,
-    #[serde(rename = "toTerm")]
-    to_term: String,
+struct GQLCharacter {
+    value: String,
+}
+
+/// Coordinate in 3D space
+#[derive(Deserialize, Debug, Clone)]
+struct GQLCoordinate {
+    position: i32,
+    x: f64,
+    y: f64,
+    z: f64,
+}
+
+/// Color value
+#[derive(Deserialize, Debug, Clone)]
+struct GQLColour {
+    position: i32,
+    value: String,  // Hex color (e.g., "#FF0000")
+}
+
+/// Link (used for both geometric lines and semantic connectives)
+#[derive(Deserialize, Debug, Clone)]
+struct GQLLink {
+    #[serde(rename = "baseCoordinate")]
+    base_coordinate: Option<GQLCoordinate>,
+    #[serde(rename = "targetCoordinate")]
+    target_coordinate: Option<GQLCoordinate>,
+    #[serde(rename = "basePosition")]
+    base_position: Option<i32>,
+    #[serde(rename = "targetPosition")]
+    target_position: Option<i32>,
+    character: Option<GQLCharacter>,
 }
 
 /// GraphQL API client for systematics data
@@ -120,66 +107,58 @@ impl GraphQLClient {
         Self { endpoint }
     }
 
-    /// Fetch a single system by name
-    pub async fn fetch_system(&self, system_name: &str) -> Result<SystemData, ApiError> {
+    /// Fetch a single system by order (1-12)
+    pub async fn fetch_system_by_order(&self, order: i32) -> Result<SystemData, ApiError> {
         let query = r#"
-            query GetSystem($name: String!) {
-                system(name: $name) {
+            query GetSystem($order: Int!) {
+                system(order: $order) {
                     name
-                    coherenceAttribute
+                    coherence
                     termDesignation
                     connectiveDesignation
-                    source
-                    color
-                    nodes
-                    edges {
-                        from
-                        to
+                    terms {
+                        position
+                        character {
+                            value
+                        }
                     }
-                    points {
+                    coordinates {
+                        position
                         x
                         y
                         z
                     }
+                    colours {
+                        position
+                        value
+                    }
                     lines {
-                        start {
+                        baseCoordinate {
                             x
                             y
                             z
                         }
-                        end {
+                        targetCoordinate {
                             x
                             y
                             z
                         }
+                        basePosition
+                        targetPosition
                     }
-                    termCharacters {
-                        name
-                        systemName
-                        index
-                        color
-                        hexColor
-                        coordinate {
-                            x
-                            y
-                            z
+                    connectives {
+                        basePosition
+                        targetPosition
+                        character {
+                            value
                         }
-                    }
-                    connectiveCharacters {
-                        name
-                        fromTerm
-                        toTerm
-                    }
-                    navigationEdges {
-                        node
-                        targetSystem
                     }
                 }
             }
         "#;
 
         let variables = serde_json::json!({
-            "name": system_name
+            "order": order
         });
 
         let response: GraphQLResponse<SystemQueryResponse> =
@@ -192,87 +171,56 @@ impl GraphQLClient {
         }
 
         let data = response.data
-            .ok_or_else(|| ApiError::NotFound(format!("System {} not found", system_name)))?;
+            .ok_or_else(|| ApiError::NotFound(format!("System with order {} not found", order)))?;
 
         let system = data.system
-            .ok_or_else(|| ApiError::NotFound(format!("System {} not found", system_name)))?;
+            .ok_or_else(|| ApiError::NotFound(format!("System with order {} not found", order)))?;
 
         Ok(self.convert_gql_system_to_system_data(system))
     }
 
-    /// Fetch all available systems
+    /// Fetch a single system by name (converts name to order)
+    pub async fn fetch_system(&self, system_name: &str) -> Result<SystemData, ApiError> {
+        // Map system names to orders
+        let order = match system_name.to_lowercase().as_str() {
+            "monad" => 1,
+            "dyad" => 2,
+            "triad" => 3,
+            "tetrad" => 4,
+            "pentad" => 5,
+            "hexad" => 6,
+            "heptad" => 7,
+            "octad" => 8,
+            "ennead" => 9,
+            "decad" => 10,
+            "hendecad" => 11,
+            "duodecad" => 12,
+            _ => return Err(ApiError::NotFound(format!("Unknown system name: {}", system_name))),
+        };
+
+        self.fetch_system_by_order(order).await
+    }
+
+    /// Fetch all available systems (orders 1-12)
     pub async fn fetch_all_systems(&self) -> Result<Vec<SystemData>, ApiError> {
-        let query = r#"
-            query GetAllSystems {
-                allSystems {
-                    name
-                    coherenceAttribute
-                    termDesignation
-                    connectiveDesignation
-                    source
-                    color
-                    nodes
-                    edges {
-                        from
-                        to
-                    }
-                    points {
-                        x
-                        y
-                        z
-                    }
-                    lines {
-                        start {
-                            x
-                            y
-                            z
-                        }
-                        end {
-                            x
-                            y
-                            z
-                        }
-                    }
-                    termCharacters {
-                        name
-                        systemName
-                        index
-                        color
-                        hexColor
-                        coordinate {
-                            x
-                            y
-                            z
-                        }
-                    }
-                    connectiveCharacters {
-                        name
-                        fromTerm
-                        toTerm
-                    }
-                    navigationEdges {
-                        node
-                        targetSystem
-                    }
+        // Query all systems by fetching each order individually
+        let mut systems = Vec::new();
+
+        for order in 1..=12 {
+            match self.fetch_system_by_order(order).await {
+                Ok(system) => systems.push(system),
+                Err(e) => {
+                    // Log warning but continue with other systems
+                    web_sys::console::warn_1(&format!("Failed to fetch system order {}: {:?}", order, e).into());
                 }
             }
-        "#;
-
-        let response: GraphQLResponse<AllSystemsQueryResponse> =
-            self.execute_query(query, None).await?;
-
-        if let Some(errors) = response.errors {
-            return Err(ApiError::ParseError(
-                errors.iter().map(|e| e.message.clone()).collect::<Vec<_>>().join(", ")
-            ));
         }
 
-        let data = response.data
-            .ok_or_else(|| ApiError::NotFound("No systems found".to_string()))?;
+        if systems.is_empty() {
+            return Err(ApiError::NotFound("No systems found".to_string()));
+        }
 
-        Ok(data.all_systems.into_iter()
-            .map(|sys| self.convert_gql_system_to_system_data(sys))
-            .collect())
+        Ok(systems)
     }
 
     /// Execute a GraphQL query
@@ -309,11 +257,14 @@ impl GraphQLClient {
 
     /// Convert GraphQL system to internal SystemData model
     fn convert_gql_system_to_system_data(&self, gql_system: GQLSystem) -> SystemData {
-        // Get node count from flat nodes array
-        let node_count = gql_system.nodes.len();
+        // Get node count from terms/coordinates array
+        let node_count = gql_system.terms.len().max(gql_system.coordinates.len());
 
         // Convert system name to lowercase for consistency
-        let system_name = gql_system.name.to_lowercase();
+        let system_name = gql_system.name
+            .as_deref()
+            .unwrap_or("unknown")
+            .to_lowercase();
 
         // Get default color scheme from legacy config or default
         let color_scheme = SystemConfig::get_by_name(&system_name)
@@ -336,95 +287,95 @@ impl GraphQLClient {
             .unwrap_or_else(|| {
                 let k_notation = format!("K{}", node_count);
                 let display_name = capitalize_first(&system_name);
-                (display_name, k_notation, system_name.clone())
+                let desc = gql_system.coherence
+                    .as_deref()
+                    .unwrap_or(&system_name)
+                    .to_string();
+                (display_name, k_notation, desc)
             });
 
-        // Sort terms by index to maintain consistent ordering
-        let mut terms_sorted: Vec<_> = gql_system.term_characters
-            .iter()
-            .filter(|t| t.index > 0)  // Validate one-based indices
-            .collect();
-        terms_sorted.sort_by_key(|t| t.index);
+        // Sort coordinates by position
+        let mut coords_sorted = gql_system.coordinates.clone();
+        coords_sorted.sort_by_key(|c| c.position);
 
-        // Extract coordinates from termCharacters (prefer term.coordinate, fallback to points)
-        let raw_coordinates: Vec<Coordinate> = if terms_sorted.iter().any(|t| t.coordinate.is_some()) {
-            // Use coordinates from termCharacters if available
-            terms_sorted
-                .iter()
-                .map(|t| {
-                    t.coordinate.as_ref().map(|c| Coordinate {
-                        x: c.x,
-                        y: c.y,
-                        z: c.z,
-                    }).unwrap_or(Coordinate { x: 0.0, y: 0.0, z: None })
-                })
-                .collect()
-        } else {
-            // Fall back to points array
-            gql_system.points
-                .iter()
-                .map(|c| Coordinate {
-                    x: c.x,
-                    y: c.y,
-                    z: c.z,
-                })
-                .collect()
-        };
+        // Extract raw coordinates
+        let raw_coordinates: Vec<Coordinate> = coords_sorted
+            .iter()
+            .map(|c| Coordinate {
+                x: c.x,
+                y: c.y,
+                z: Some(c.z),
+            })
+            .collect();
 
         // Transform coordinates to fit in 800x800 viewport with margins
         let coordinates = transform_coordinates_to_viewport(raw_coordinates, 800.0, 800.0, 100.0);
 
-        // Convert edges from flat array (one-based API to zero-based internal)
-        let edges: Vec<TopologyEdge> = gql_system.edges
-            .iter()
-            .filter(|e| e.from > 0 && e.to > 0)  // Validate one-based indices
-            .map(|e| TopologyEdge {
-                from: (e.from - 1) as usize,  // Convert to zero-based
-                to: (e.to - 1) as usize,      // Convert to zero-based
-            })
-            .collect();
+        // Convert edges from lines using positions
+        let mut edges: Vec<TopologyEdge> = Vec::new();
+        for line in &gql_system.lines {
+            if let (Some(base_pos), Some(target_pos)) = (line.base_position, line.target_position) {
+                // Positions are 1-based, convert to 0-based indices
+                if base_pos > 0 && target_pos > 0 {
+                    edges.push(TopologyEdge {
+                        from: (base_pos - 1) as usize,
+                        to: (target_pos - 1) as usize,
+                    });
+                }
+            }
+        }
 
-        // Convert nodes from flat array (one-based API to zero-based internal)
-        let indexes: Vec<usize> = gql_system.nodes
-            .iter()
-            .filter(|&&n| n > 0)  // Validate one-based indices
-            .map(|&n| (n - 1) as usize)  // Convert to zero-based
-            .collect();
+        // Create indexes (zero-based sequential indices for all nodes)
+        let indexes: Vec<usize> = (0..node_count).collect();
 
-        // Extract term names
+        // Sort terms by position and extract names
+        let mut terms_sorted = gql_system.terms.clone();
+        terms_sorted.sort_by_key(|t| t.position);
+
         let terms: Vec<String> = terms_sorted
             .iter()
-            .map(|t| t.name.clone())
+            .filter_map(|t| t.character.as_ref().map(|c| c.value.clone()))
             .collect();
 
-        // Extract term colors from hexColor field (direct hex codes from API)
-        let default_color = "#4A90E2";
-        let term_colors: Vec<String> = terms_sorted
+        // Sort colours by position and extract values
+        let mut colours_sorted = gql_system.colours.clone();
+        colours_sorted.sort_by_key(|c| c.position);
+
+        let term_colors: Vec<String> = colours_sorted
             .iter()
-            .map(|t| {
-                if !t.hex_color.is_empty() {
-                    t.hex_color.clone()
-                } else {
-                    default_color.to_string()
+            .map(|c| c.value.clone())
+            .collect();
+
+        // Convert connectives to internal format
+        // Build a position->term lookup for connectives
+        let term_by_position: std::collections::HashMap<i32, String> = terms_sorted
+            .iter()
+            .filter_map(|t| {
+                t.character.as_ref().map(|c| (t.position, c.value.clone()))
+            })
+            .collect();
+
+        let connectives: Vec<(String, String, String)> = gql_system.connectives
+            .iter()
+            .filter_map(|c| {
+                if let (Some(base_pos), Some(target_pos), Some(char_val)) = (
+                    c.base_position,
+                    c.target_position,
+                    c.character.as_ref().map(|ch| ch.value.clone())
+                ) {
+                    if let (Some(base_term), Some(target_term)) = (
+                        term_by_position.get(&base_pos),
+                        term_by_position.get(&target_pos)
+                    ) {
+                        return Some((char_val, base_term.clone(), target_term.clone()));
+                    }
                 }
+                None
             })
             .collect();
 
-        // Convert connectors from connectiveCharacters
-        let connectives: Vec<(String, String, String)> = gql_system.connective_characters
-            .iter()
-            .map(|c| (c.name.clone(), c.from_term.clone(), c.to_term.clone()))
-            .collect();
-
-        // Convert navigation edges from one-based (API) to zero-based (internal)
-        let navigation_edges: Vec<crate::api::models::NavigationEdge> = gql_system.navigation_edges
-            .iter()
-            .filter(|e| e.node > 0)  // Validate one-based indices
-            .map(|e| crate::api::models::NavigationEdge {
-                node: (e.node - 1) as usize,  // Convert to zero-based for array indexing
-                target_system: e.target_system.clone(),
-            })
-            .collect();
+        // No navigation edges in the new API - leave empty for now
+        let navigation_edges: Vec<crate::api::models::NavigationEdge> = Vec::new();
 
         SystemData {
             system_name,
