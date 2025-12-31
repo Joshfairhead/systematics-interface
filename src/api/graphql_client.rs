@@ -56,7 +56,7 @@ struct GQLSystem {
 /// Term with character
 #[derive(Deserialize, Debug, Clone)]
 struct GQLTerm {
-    position: i32,
+    position: Option<i32>,
     character: Option<GQLCharacter>,
 }
 
@@ -69,7 +69,7 @@ struct GQLCharacter {
 /// Coordinate in 3D space
 #[derive(Deserialize, Debug, Clone)]
 struct GQLCoordinate {
-    position: i32,
+    position: Option<i32>,
     x: f64,
     y: f64,
     z: f64,
@@ -78,7 +78,7 @@ struct GQLCoordinate {
 /// Color value
 #[derive(Deserialize, Debug, Clone)]
 struct GQLColour {
-    position: i32,
+    position: Option<i32>,
     value: String,  // Hex color (e.g., "#FF0000")
 }
 
@@ -342,14 +342,19 @@ impl GraphQLClient {
                 (display_name, k_notation, desc)
             });
 
-        // Sort coordinates by position
-        let mut coords_sorted = gql_system.coordinates.clone();
-        coords_sorted.sort_by_key(|c| c.position);
+        // Sort coordinates by position (filtering out items without position, then sorting, then using index for missing positions)
+        let mut coords_with_position: Vec<(usize, &GQLCoordinate)> = gql_system.coordinates
+            .iter()
+            .enumerate()
+            .collect();
+
+        // Sort by position if available, otherwise by index
+        coords_with_position.sort_by_key(|(idx, c)| c.position.unwrap_or(*idx as i32));
 
         // Extract raw coordinates
-        let raw_coordinates: Vec<Coordinate> = coords_sorted
+        let raw_coordinates: Vec<Coordinate> = coords_with_position
             .iter()
-            .map(|c| Coordinate {
+            .map(|(_, c)| Coordinate {
                 x: c.x,
                 y: c.y,
                 z: Some(c.z),
@@ -376,30 +381,39 @@ impl GraphQLClient {
         // Create indexes (zero-based sequential indices for all nodes)
         let indexes: Vec<usize> = (0..node_count).collect();
 
-        // Sort terms by position and extract names
-        let mut terms_sorted = gql_system.terms.clone();
-        terms_sorted.sort_by_key(|t| t.position);
-
-        let terms: Vec<String> = terms_sorted
-            .iter()
-            .filter_map(|t| t.character.as_ref().map(|c| c.value.clone()))
+        // Sort terms by position (using index for missing positions) and extract names
+        let mut terms_with_position: Vec<(usize, GQLTerm)> = gql_system.terms
+            .into_iter()
+            .enumerate()
             .collect();
 
-        // Sort colours by position and extract values
-        let mut colours_sorted = gql_system.colours.clone();
-        colours_sorted.sort_by_key(|c| c.position);
+        terms_with_position.sort_by_key(|(idx, t)| t.position.unwrap_or(*idx as i32));
 
-        let term_colors: Vec<String> = colours_sorted
+        let terms: Vec<String> = terms_with_position
             .iter()
-            .map(|c| c.value.clone())
+            .filter_map(|(_, t)| t.character.as_ref().map(|c| c.value.clone()))
+            .collect();
+
+        // Sort colours by position (using index for missing positions) and extract values
+        let mut colours_with_position: Vec<(usize, &GQLColour)> = gql_system.colours
+            .iter()
+            .enumerate()
+            .collect();
+
+        colours_with_position.sort_by_key(|(idx, c)| c.position.unwrap_or(*idx as i32));
+
+        let term_colors: Vec<String> = colours_with_position
+            .iter()
+            .map(|(_, c)| c.value.clone())
             .collect();
 
         // Convert connectives to internal format
         // Build a position->term lookup for connectives
-        let term_by_position: std::collections::HashMap<i32, String> = terms_sorted
+        let term_by_position: std::collections::HashMap<i32, String> = terms_with_position
             .iter()
-            .filter_map(|t| {
-                t.character.as_ref().map(|c| (t.position, c.value.clone()))
+            .filter_map(|(idx, t)| {
+                let pos = t.position.unwrap_or(*idx as i32);
+                t.character.as_ref().map(|c| (pos, c.value.clone()))
             })
             .collect();
 
