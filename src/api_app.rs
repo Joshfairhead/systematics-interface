@@ -1,7 +1,6 @@
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
-use crate::api::models::SystemData;
-use crate::api::client::MockApiClient;
+use crate::api::models::SystemView;
 use crate::api::graphql_client::GraphQLClient;
 use crate::components::api_graph_view::ApiGraphView;
 use crate::components::system_selector::SystemSelector;
@@ -14,20 +13,19 @@ pub struct Breadcrumb {
 
 pub enum ApiAppMsg {
     SelectSystem(String),
-    SystemsLoaded(Vec<SystemData>),
-    SystemLoaded(SystemData),
+    SystemsLoaded(Vec<SystemView>),
+    SystemLoaded(SystemView),
     LoadError(String),
     NavigateToSystem(String),
     NavigateBack,
 }
 
 pub struct ApiApp {
-    systems: Vec<SystemData>,
-    selected_system: Option<SystemData>,
+    systems: Vec<SystemView>,
+    selected_system: Option<SystemView>,
     loading: bool,
     error: Option<String>,
-    graphql_client: Option<GraphQLClient>,
-    use_graphql: bool,
+    graphql_client: GraphQLClient,
     breadcrumbs: Vec<Breadcrumb>,
 }
 
@@ -36,36 +34,16 @@ impl Component for ApiApp {
     type Properties = ();
 
     fn create(ctx: &Context<Self>) -> Self {
-        // Configuration: Set to true to use GraphQL API, false to use mock data
-        // TODO: Read from environment variable or config
-        let use_graphql = true; // Using real GraphQL API
-
         // GraphQL endpoint - systematics-v0.0.3 server
         let graphql_endpoint = "http://localhost:8000/graphql".to_string();
-
-        let graphql_client = if use_graphql {
-            Some(GraphQLClient::new(graphql_endpoint))
-        } else {
-            None
-        };
+        let graphql_client = GraphQLClient::new(graphql_endpoint);
 
         // Load all systems on initialization
         let link = ctx.link().clone();
-        let use_gql = use_graphql;
         let client = graphql_client.clone();
 
         spawn_local(async move {
-            let result = if use_gql {
-                if let Some(client) = client {
-                    client.fetch_all_systems().await
-                } else {
-                    MockApiClient::fetch_all_systems().await
-                }
-            } else {
-                MockApiClient::fetch_all_systems().await
-            };
-
-            match result {
+            match client.fetch_all_systems().await {
                 Ok(systems) => {
                     link.send_message(ApiAppMsg::SystemsLoaded(systems));
                 }
@@ -81,7 +59,6 @@ impl Component for ApiApp {
             loading: true,
             error: None,
             graphql_client,
-            use_graphql,
             breadcrumbs: vec![],
         }
     }
@@ -96,21 +73,10 @@ impl Component for ApiApp {
 
                 // Fetch the selected system
                 let link = ctx.link().clone();
-                let use_gql = self.use_graphql;
                 let client = self.graphql_client.clone();
 
                 spawn_local(async move {
-                    let result = if use_gql {
-                        if let Some(client) = client {
-                            client.fetch_system(&name).await
-                        } else {
-                            MockApiClient::fetch_system(&name).await
-                        }
-                    } else {
-                        MockApiClient::fetch_system(&name).await
-                    };
-
-                    match result {
+                    match client.fetch_system(&name).await {
                         Ok(system) => {
                             link.send_message(ApiAppMsg::SystemLoaded(system));
                         }
@@ -126,7 +92,7 @@ impl Component for ApiApp {
                 // Add current system to breadcrumbs before navigating
                 if let Some(ref current) = self.selected_system {
                     self.breadcrumbs.push(Breadcrumb {
-                        system_name: current.system_name.clone(),
+                        system_name: current.name.clone().unwrap_or_else(|| current.display_name()),
                     });
                 }
 
@@ -135,21 +101,10 @@ impl Component for ApiApp {
 
                 // Fetch the target system
                 let link = ctx.link().clone();
-                let use_gql = self.use_graphql;
                 let client = self.graphql_client.clone();
 
                 spawn_local(async move {
-                    let result = if use_gql {
-                        if let Some(client) = client {
-                            client.fetch_system(&name).await
-                        } else {
-                            MockApiClient::fetch_system(&name).await
-                        }
-                    } else {
-                        MockApiClient::fetch_system(&name).await
-                    };
-
-                    match result {
+                    match client.fetch_system(&name).await {
                         Ok(system) => {
                             link.send_message(ApiAppMsg::SystemLoaded(system));
                         }
@@ -168,22 +123,11 @@ impl Component for ApiApp {
 
                     // Fetch the previous system
                     let link = ctx.link().clone();
-                    let use_gql = self.use_graphql;
                     let client = self.graphql_client.clone();
                     let name = breadcrumb.system_name;
 
                     spawn_local(async move {
-                        let result = if use_gql {
-                            if let Some(client) = client {
-                                client.fetch_system(&name).await
-                            } else {
-                                MockApiClient::fetch_system(&name).await
-                            }
-                        } else {
-                            MockApiClient::fetch_system(&name).await
-                        };
-
-                        match result {
+                        match client.fetch_system(&name).await {
                             Ok(system) => {
                                 link.send_message(ApiAppMsg::SystemLoaded(system));
                             }
@@ -201,7 +145,7 @@ impl Component for ApiApp {
 
                 web_sys::console::log_1(&format!("ApiApp received {} systems", systems.len()).into());
                 for sys in &systems {
-                    web_sys::console::log_1(&format!("  - {} ({})", sys.system_name, sys.display_name).into());
+                    web_sys::console::log_1(&format!("  - order {} ({})", sys.order, sys.display_name()).into());
                 }
 
                 // Select the first system by default
@@ -238,26 +182,26 @@ impl Component for ApiApp {
                             if self.loading && self.systems.is_empty() {
                                 html! { <div class="loading">{"Loading systems..."}</div> }
                             } else {
-                                // Convert SystemData to SystemConfig for SystemSelector
+                                // Convert SystemView to SystemConfig for SystemSelector
                                 let legacy_systems: Vec<SystemConfig> = self.systems.iter().map(|sys| {
                                     SystemConfig {
-                                        name: sys.system_name.clone(),
-                                        display_name: sys.display_name.clone(),
-                                        node_count: sys.node_count,
-                                        k_notation: sys.k_notation.clone(),
-                                        description: sys.description.clone(),
+                                        name: sys.name.clone().unwrap_or_else(|| sys.display_name().to_lowercase()),
+                                        display_name: sys.display_name(),
+                                        node_count: sys.node_count(),
+                                        k_notation: sys.k_notation(),
+                                        description: sys.description(),
                                         color_scheme: crate::core::system_config::ColorScheme {
-                                            nodes: sys.color_scheme.nodes.clone(),
-                                            edges: sys.color_scheme.edges.clone(),
-                                            selected_node: sys.color_scheme.selected_node.clone(),
-                                            selected_edge: sys.color_scheme.selected_edge.clone(),
+                                            nodes: "#4A90E2".to_string(),
+                                            edges: "#888888".to_string(),
+                                            selected_node: "#FF6B6B".to_string(),
+                                            selected_edge: "#FF6B6B".to_string(),
                                         },
                                     }
                                 }).collect();
 
                                 let selected_name = self.selected_system
                                     .as_ref()
-                                    .map(|s| s.system_name.clone())
+                                    .map(|s| s.name.clone().unwrap_or_else(|| s.display_name().to_lowercase()))
                                     .unwrap_or_else(|| "monad".to_string());
 
                                 html! {
@@ -285,7 +229,7 @@ impl Component for ApiApp {
                                 })}
                                 if let Some(ref system) = self.selected_system {
                                     <span class="breadcrumb-current">
-                                        { &system.system_name }
+                                        { system.display_name() }
                                     </span>
                                 }
                                 <button class="breadcrumb-back" onclick={ on_back }>

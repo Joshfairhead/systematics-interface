@@ -1,8 +1,6 @@
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
-use crate::api::models::{SystemData, ColorScheme, Coordinate, TopologyEdge};
-use crate::api::client::ApiError;
-use crate::core::system_config::SystemConfig;
+use crate::api::models::{SystemView, ApiError, Coordinate};
 
 /// GraphQL request structure
 #[derive(Serialize)]
@@ -24,76 +22,24 @@ struct GraphQLError {
     message: String,
 }
 
-/// System query response
+/// System query response (for system(order:) query)
 #[derive(Deserialize, Debug)]
 struct SystemQueryResponse {
-    system: Option<GQLSystem>,
+    system: Option<SystemView>,
+}
+
+/// System by name query response
+#[derive(Deserialize, Debug)]
+struct SystemByNameQueryResponse {
+    #[serde(rename = "systemByName")]
+    system_by_name: Option<SystemView>,
 }
 
 /// All systems query response
 #[derive(Deserialize, Debug)]
 struct AllSystemsQueryResponse {
     #[serde(rename = "allSystems")]
-    all_systems: Vec<GQLSystem>,
-}
-
-/// GraphQL System type (matches GqlSystemView from actual backend)
-#[derive(Deserialize, Debug, Clone)]
-struct GQLSystem {
-    name: Option<String>,
-    coherence: Option<String>,
-    #[serde(rename = "termDesignation")]
-    term_designation: Option<String>,
-    #[serde(rename = "connectiveDesignation")]
-    connective_designation: Option<String>,
-    terms: Vec<GQLTerm>,
-    coordinates: Vec<GQLCoordinate>,
-    colours: Vec<GQLColour>,
-    lines: Vec<GQLLink>,
-    connectives: Vec<GQLLink>,
-}
-
-/// Term with character
-#[derive(Deserialize, Debug, Clone)]
-struct GQLTerm {
-    position: Option<i32>,
-    character: Option<GQLCharacter>,
-}
-
-/// Character value
-#[derive(Deserialize, Debug, Clone)]
-struct GQLCharacter {
-    value: String,
-}
-
-/// Coordinate in 3D space
-#[derive(Deserialize, Debug, Clone)]
-struct GQLCoordinate {
-    position: Option<i32>,
-    x: f64,
-    y: f64,
-    z: f64,
-}
-
-/// Color value
-#[derive(Deserialize, Debug, Clone)]
-struct GQLColour {
-    position: Option<i32>,
-    value: String,  // Hex color (e.g., "#FF0000")
-}
-
-/// Link (used for both geometric lines and semantic connectives)
-#[derive(Deserialize, Debug, Clone)]
-struct GQLLink {
-    #[serde(rename = "baseCoordinate")]
-    base_coordinate: Option<GQLCoordinate>,
-    #[serde(rename = "targetCoordinate")]
-    target_coordinate: Option<GQLCoordinate>,
-    #[serde(rename = "basePosition")]
-    base_position: Option<i32>,
-    #[serde(rename = "targetPosition")]
-    target_position: Option<i32>,
-    character: Option<GQLCharacter>,
+    all_systems: Vec<SystemView>,
 }
 
 /// GraphQL API client for systematics data
@@ -108,62 +54,116 @@ impl GraphQLClient {
         Self { endpoint }
     }
 
-    /// Fetch a single system by order (1-12)
-    pub async fn fetch_system_by_order(&self, order: i32) -> Result<SystemData, ApiError> {
-        let query = r#"
-            query GetSystem($order: Int!) {
-                system(order: $order) {
-                    name
-                    coherence
-                    termDesignation
-                    connectiveDesignation
-                    terms {
-                        position
-                        character {
-                            value
-                        }
-                    }
-                    coordinates {
-                        position
-                        x
-                        y
-                        z
-                    }
-                    colours {
-                        position
-                        value
-                    }
-                    lines {
-                        baseCoordinate {
-                            x
-                            y
-                            z
-                        }
-                        targetCoordinate {
-                            x
-                            y
-                            z
-                        }
-                        basePosition
-                        targetPosition
-                    }
-                    connectives {
-                        basePosition
-                        targetPosition
-                        character {
-                            value
-                        }
-                    }
-                }
+    /// GraphQL fragment for system fields (reduces duplication)
+    const SYSTEM_FIELDS: &'static str = r#"
+        order
+        name
+        coherence
+        termDesignation
+        connectiveDesignation
+        terms {
+            id
+            order
+            position
+            characterId
+            character {
+                id
+                language
+                value
             }
-        "#;
+        }
+        coordinates {
+            id
+            order
+            position
+            x
+            y
+            z
+        }
+        colours {
+            id
+            order
+            position
+            language
+            value
+        }
+        lines {
+            id
+            baseId
+            targetId
+            linkType
+            characterId
+            tag
+            order
+            basePosition
+            targetPosition
+            baseCoordinate {
+                id
+                order
+                position
+                x
+                y
+                z
+            }
+            targetCoordinate {
+                id
+                order
+                position
+                x
+                y
+                z
+            }
+        }
+        connectives {
+            id
+            baseId
+            targetId
+            linkType
+            characterId
+            tag
+            order
+            basePosition
+            targetPosition
+            character {
+                id
+                language
+                value
+            }
+            baseCoordinate {
+                id
+                order
+                position
+                x
+                y
+                z
+            }
+            targetCoordinate {
+                id
+                order
+                position
+                x
+                y
+                z
+            }
+        }
+    "#;
+
+    /// Fetch a single system by order (1-12)
+    pub async fn fetch_system_by_order(&self, order: i32) -> Result<SystemView, ApiError> {
+        let query = format!(r#"
+            query GetSystem($order: Int!) {{
+                system(order: $order) {{
+                    {}
+                }}
+            }}
+        "#, Self::SYSTEM_FIELDS);
 
         let variables = serde_json::json!({
             "order": order
         });
 
         let response: GraphQLResponse<SystemQueryResponse> =
-            self.execute_query(query, Some(variables)).await?;
+            self.execute_query(&query, Some(variables)).await?;
 
         if let Some(errors) = response.errors {
             return Err(ApiError::ParseError(
@@ -177,83 +177,53 @@ impl GraphQLClient {
         let system = data.system
             .ok_or_else(|| ApiError::NotFound(format!("System with order {} not found", order)))?;
 
-        Ok(self.convert_gql_system_to_system_data(system))
+        Ok(self.transform_coordinates(system))
     }
 
-    /// Fetch a single system by name (converts name to order)
-    pub async fn fetch_system(&self, system_name: &str) -> Result<SystemData, ApiError> {
-        // Map system names to orders
-        let order = match system_name.to_lowercase().as_str() {
-            "monad" => 1,
-            "dyad" => 2,
-            "triad" => 3,
-            "tetrad" => 4,
-            "pentad" => 5,
-            "hexad" => 6,
-            "heptad" => 7,
-            "octad" => 8,
-            "ennead" => 9,
-            "decad" => 10,
-            "undecad" | "hendecad" => 11,  // Accept both names
-            "dodecad" | "duodecad" => 12,  // Accept both names
-            _ => return Err(ApiError::NotFound(format!("Unknown system name: {}", system_name))),
-        };
+    /// Fetch a single system by name (uses systemByName API query)
+    pub async fn fetch_system(&self, system_name: &str) -> Result<SystemView, ApiError> {
+        let query = format!(r#"
+            query GetSystemByName($name: String!) {{
+                systemByName(name: $name) {{
+                    {}
+                }}
+            }}
+        "#, Self::SYSTEM_FIELDS);
 
-        self.fetch_system_by_order(order).await
+        let variables = serde_json::json!({
+            "name": system_name
+        });
+
+        let response: GraphQLResponse<SystemByNameQueryResponse> =
+            self.execute_query(&query, Some(variables)).await?;
+
+        if let Some(errors) = response.errors {
+            return Err(ApiError::ParseError(
+                errors.iter().map(|e| e.message.clone()).collect::<Vec<_>>().join(", ")
+            ));
+        }
+
+        let data = response.data
+            .ok_or_else(|| ApiError::NotFound(format!("System '{}' not found", system_name)))?;
+
+        let system = data.system_by_name
+            .ok_or_else(|| ApiError::NotFound(format!("System '{}' not found", system_name)))?;
+
+        Ok(self.transform_coordinates(system))
     }
 
     /// Fetch all available systems (orders 1-12)
-    pub async fn fetch_all_systems(&self) -> Result<Vec<SystemData>, ApiError> {
-        let query = r#"
-            query GetAllSystems {
-                allSystems {
-                    name
-                    coherence
-                    termDesignation
-                    connectiveDesignation
-                    terms {
-                        position
-                        character {
-                            value
-                        }
-                    }
-                    coordinates {
-                        position
-                        x
-                        y
-                        z
-                    }
-                    colours {
-                        position
-                        value
-                    }
-                    lines {
-                        baseCoordinate {
-                            x
-                            y
-                            z
-                        }
-                        targetCoordinate {
-                            x
-                            y
-                            z
-                        }
-                        basePosition
-                        targetPosition
-                    }
-                    connectives {
-                        basePosition
-                        targetPosition
-                        character {
-                            value
-                        }
-                    }
-                }
-            }
-        "#;
+    pub async fn fetch_all_systems(&self) -> Result<Vec<SystemView>, ApiError> {
+        let query = format!(r#"
+            query GetAllSystems {{
+                allSystems {{
+                    {}
+                }}
+            }}
+        "#, Self::SYSTEM_FIELDS);
 
         let response: GraphQLResponse<AllSystemsQueryResponse> =
-            self.execute_query(query, None).await?;
+            self.execute_query(&query, None).await?;
 
         if let Some(errors) = response.errors {
             return Err(ApiError::ParseError(
@@ -266,16 +236,15 @@ impl GraphQLClient {
 
         web_sys::console::log_1(&format!("Fetched {} systems from allSystems query", data.all_systems.len()).into());
 
-        let converted_systems: Vec<SystemData> = data.all_systems.into_iter()
+        let systems: Vec<SystemView> = data.all_systems.into_iter()
             .map(|sys| {
-                let system_data = self.convert_gql_system_to_system_data(sys);
-                web_sys::console::log_1(&format!("Converted system: {} ({})", system_data.system_name, system_data.display_name).into());
-                system_data
+                let transformed = self.transform_coordinates(sys);
+                web_sys::console::log_1(&format!("Loaded system: {} (order {})", transformed.display_name(), transformed.order).into());
+                transformed
             })
             .collect();
 
-        web_sys::console::log_1(&format!("Returning {} converted systems", converted_systems.len()).into());
-        Ok(converted_systems)
+        Ok(systems)
     }
 
     /// Execute a GraphQL query
@@ -310,157 +279,22 @@ impl GraphQLClient {
             .map_err(|e| ApiError::ParseError(e.to_string()))
     }
 
-    /// Convert GraphQL system to internal SystemData model
-    fn convert_gql_system_to_system_data(&self, gql_system: GQLSystem) -> SystemData {
-        // Get node count from terms/coordinates array
-        let node_count = gql_system.terms.len().max(gql_system.coordinates.len());
+    /// Transform coordinates from API space to viewport space (800x800 with margins)
+    fn transform_coordinates(&self, mut system: SystemView) -> SystemView {
+        let viewport_width = 800.0;
+        let viewport_height = 800.0;
+        let margin = 100.0;
 
-        // Convert system name to lowercase for consistency
-        let system_name = gql_system.name
-            .as_deref()
-            .unwrap_or("unknown")
-            .to_lowercase();
+        // Transform main coordinates array only
+        // Links will look up coordinates by position from this array
+        system.coordinates = transform_coordinates_to_viewport(
+            system.coordinates,
+            viewport_width,
+            viewport_height,
+            margin,
+        );
 
-        // Get default color scheme from legacy config or default
-        let color_scheme = SystemConfig::get_by_name(&system_name)
-            .map(|config| ColorScheme {
-                nodes: config.color_scheme.nodes,
-                edges: config.color_scheme.edges,
-                selected_node: config.color_scheme.selected_node,
-                selected_edge: config.color_scheme.selected_edge,
-            })
-            .unwrap_or_else(|| ColorScheme {
-                nodes: "#4A90E2".to_string(),
-                edges: "#888888".to_string(),
-                selected_node: "#FF6B6B".to_string(),
-                selected_edge: "#FF6B6B".to_string(),
-            });
-
-        // Get metadata from legacy config for display name and description
-        let (display_name, k_notation, description) = SystemConfig::get_by_name(&system_name)
-            .map(|config| (config.display_name, config.k_notation, config.description))
-            .unwrap_or_else(|| {
-                let k_notation = format!("K{}", node_count);
-                let display_name = capitalize_first(&system_name);
-                let desc = gql_system.coherence
-                    .as_deref()
-                    .unwrap_or(&system_name)
-                    .to_string();
-                (display_name, k_notation, desc)
-            });
-
-        // Sort coordinates by position (filtering out items without position, then sorting, then using index for missing positions)
-        let mut coords_with_position: Vec<(usize, &GQLCoordinate)> = gql_system.coordinates
-            .iter()
-            .enumerate()
-            .collect();
-
-        // Sort by position if available, otherwise by index
-        coords_with_position.sort_by_key(|(idx, c)| c.position.unwrap_or(*idx as i32));
-
-        // Extract raw coordinates
-        let raw_coordinates: Vec<Coordinate> = coords_with_position
-            .iter()
-            .map(|(_, c)| Coordinate {
-                x: c.x,
-                y: c.y,
-                z: Some(c.z),
-            })
-            .collect();
-
-        // Transform coordinates to fit in 800x800 viewport with margins
-        let coordinates = transform_coordinates_to_viewport(raw_coordinates, 800.0, 800.0, 100.0);
-
-        // Convert edges from lines using positions
-        let mut edges: Vec<TopologyEdge> = Vec::new();
-        for line in &gql_system.lines {
-            if let (Some(base_pos), Some(target_pos)) = (line.base_position, line.target_position) {
-                // Positions are 1-based, convert to 0-based indices
-                if base_pos > 0 && target_pos > 0 {
-                    edges.push(TopologyEdge {
-                        from: (base_pos - 1) as usize,
-                        to: (target_pos - 1) as usize,
-                    });
-                }
-            }
-        }
-
-        // Create indexes (zero-based sequential indices for all nodes)
-        let indexes: Vec<usize> = (0..node_count).collect();
-
-        // Sort terms by position (using index for missing positions) and extract names
-        let mut terms_with_position: Vec<(usize, GQLTerm)> = gql_system.terms
-            .into_iter()
-            .enumerate()
-            .collect();
-
-        terms_with_position.sort_by_key(|(idx, t)| t.position.unwrap_or(*idx as i32));
-
-        let terms: Vec<String> = terms_with_position
-            .iter()
-            .filter_map(|(_, t)| t.character.as_ref().map(|c| c.value.clone()))
-            .collect();
-
-        // Sort colours by position (using index for missing positions) and extract values
-        let mut colours_with_position: Vec<(usize, &GQLColour)> = gql_system.colours
-            .iter()
-            .enumerate()
-            .collect();
-
-        colours_with_position.sort_by_key(|(idx, c)| c.position.unwrap_or(*idx as i32));
-
-        let term_colors: Vec<String> = colours_with_position
-            .iter()
-            .map(|(_, c)| c.value.clone())
-            .collect();
-
-        // Convert connectives to internal format
-        // Build a position->term lookup for connectives
-        let term_by_position: std::collections::HashMap<i32, String> = terms_with_position
-            .iter()
-            .filter_map(|(idx, t)| {
-                let pos = t.position.unwrap_or(*idx as i32);
-                t.character.as_ref().map(|c| (pos, c.value.clone()))
-            })
-            .collect();
-
-        let connectives: Vec<(String, String, String)> = gql_system.connectives
-            .iter()
-            .filter_map(|c| {
-                if let (Some(base_pos), Some(target_pos), Some(char_val)) = (
-                    c.base_position,
-                    c.target_position,
-                    c.character.as_ref().map(|ch| ch.value.clone())
-                ) {
-                    if let (Some(base_term), Some(target_term)) = (
-                        term_by_position.get(&base_pos),
-                        term_by_position.get(&target_pos)
-                    ) {
-                        return Some((char_val, base_term.clone(), target_term.clone()));
-                    }
-                }
-                None
-            })
-            .collect();
-
-        // No navigation edges in the new API - leave empty for now
-        let navigation_edges: Vec<crate::api::models::NavigationEdge> = Vec::new();
-
-        SystemData {
-            system_name,
-            display_name,
-            k_notation,
-            description,
-            node_count,
-            coordinates,
-            indexes,
-            edges,
-            color_scheme,
-            terms,
-            term_colors,
-            connectives,
-            navigation_edges,
-        }
+        system
     }
 }
 
@@ -480,11 +314,10 @@ fn transform_coordinates_to_viewport(
 
     // For a single point, center it in the viewport
     if coords.len() == 1 {
-        return vec![Coordinate {
-            x: viewport_width / 2.0,
-            y: viewport_height / 2.0,
-            z: coords[0].z,
-        }];
+        let mut coord = coords.into_iter().next().unwrap();
+        coord.x = viewport_width / 2.0;
+        coord.y = viewport_height / 2.0;
+        return vec![coord];
     }
 
     // Find bounding box to determine scale
@@ -501,14 +334,13 @@ fn transform_coordinates_to_viewport(
     }
 
     // Calculate the full extent needed to contain all points
-    // Use the center of bounding box as origin, and max extent for scaling
     let center_x = (min_x + max_x) / 2.0;
     let center_y = (min_y + max_y) / 2.0;
 
     let extent_x = (max_x - min_x).max(0.0001);
     let extent_y = (max_y - min_y).max(0.0001);
 
-    // Use the larger extent for both axes to preserve aspect ratio and coordinate system
+    // Use the larger extent for both axes to preserve aspect ratio
     let max_extent = extent_x.max(extent_y);
 
     // Calculate available space (viewport minus margins on both sides)
@@ -532,19 +364,10 @@ fn transform_coordinates_to_viewport(
     // 4. Translate to viewport center
     coords
         .into_iter()
-        .map(|coord| Coordinate {
-            x: (coord.x - center_x) * scale + viewport_center_x,
-            y: -(coord.y - center_y) * scale + viewport_center_y,  // Negate Y for SVG
-            z: coord.z,
+        .map(|mut coord| {
+            coord.x = (coord.x - center_x) * scale + viewport_center_x;
+            coord.y = -(coord.y - center_y) * scale + viewport_center_y;  // Negate Y for SVG
+            coord
         })
         .collect()
-}
-
-/// Helper function to capitalize the first letter
-fn capitalize_first(s: &str) -> String {
-    let mut chars = s.chars();
-    match chars.next() {
-        None => String::new(),
-        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-    }
 }

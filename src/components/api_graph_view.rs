@@ -1,9 +1,15 @@
 use yew::prelude::*;
-use crate::api::models::{SystemData, Coordinate, TopologyEdge};
+use crate::api::models::SystemView;
+
+/// Default colors for rendering
+const DEFAULT_NODE_COLOR: &str = "#4A90E2";
+const DEFAULT_EDGE_COLOR: &str = "#888888";
+const SELECTED_NODE_COLOR: &str = "#FF6B6B";
+const SELECTED_EDGE_COLOR: &str = "#FF6B6B";
 
 #[derive(Properties, PartialEq)]
 pub struct ApiGraphViewProps {
-    pub system: SystemData,
+    pub system: SystemView,
     #[prop_or_default]
     pub on_navigate: Option<Callback<String>>,
 }
@@ -32,24 +38,15 @@ impl Component for ApiGraphView {
         }
     }
 
-    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             ApiGraphMsg::NodeClicked(idx) => {
-                // Check if this node has a navigation target
-                let system = &ctx.props().system;
-                if let Some(nav_edge) = system.navigation_edges.iter().find(|e| e.node == idx) {
-                    // Navigate to the target system
-                    if let Some(ref callback) = ctx.props().on_navigate {
-                        callback.emit(nav_edge.target_system.clone());
-                    }
+                // Toggle selection
+                if self.selected_node == Some(idx) {
+                    self.selected_node = None;
                 } else {
-                    // No navigation target, just select/deselect
-                    if self.selected_node == Some(idx) {
-                        self.selected_node = None;
-                    } else {
-                        self.selected_node = Some(idx);
-                        self.selected_edge = None;
-                    }
+                    self.selected_node = Some(idx);
+                    self.selected_edge = None;
                 }
                 true
             }
@@ -92,11 +89,11 @@ impl Component for ApiGraphView {
                     viewBox="0 0 800 800"
                     preserveAspectRatio="xMidYMid meet"
                 >
-                    { self.render_edges(&system.edges, &system.coordinates, system) }
+                    { self.render_edges(system) }
                     if self.show_edge_labels {
-                        { self.render_edge_labels(&system.edges, &system.coordinates, &system.terms, &system.connectives) }
+                        { self.render_edge_labels(system) }
                     }
-                    { self.render_nodes(ctx, &system.coordinates, system) }
+                    { self.render_nodes(ctx, system) }
                 </svg>
             </div>
         }
@@ -104,51 +101,60 @@ impl Component for ApiGraphView {
 }
 
 impl ApiGraphView {
-    // No scaling needed - use coordinates directly
-    fn scale_x(x: f64) -> f64 {
-        x
-    }
+    /// Render edges (lines) from the system
+    fn render_edges(&self, system: &SystemView) -> Html {
+        web_sys::console::log_1(&format!("render_edges: {} lines to render", system.lines.len()).into());
 
-    fn scale_y(y: f64) -> f64 {
-        y
-    }
+        system.lines.iter().map(|line| {
+            // Get positions (1-based from API)
+            let base_pos = line.base_position.unwrap_or(0);
+            let target_pos = line.target_position.unwrap_or(0);
 
-    fn render_edges(
-        &self,
-        edges: &[TopologyEdge],
-        coordinates: &[Coordinate],
-        system: &SystemData,
-    ) -> Html {
-        edges.iter().map(|edge| {
-            // Safely get coordinates with bounds checking
-            if edge.from >= coordinates.len() || edge.to >= coordinates.len() {
+            web_sys::console::log_1(&format!("Line: {} -> {} (base_pos={}, target_pos={})",
+                line.base_id, line.target_id, base_pos, target_pos).into());
+
+            if base_pos <= 0 || target_pos <= 0 {
+                web_sys::console::log_1(&"Skipping line: invalid positions".into());
                 return html! {};
             }
 
-            let from_node = &coordinates[edge.from];
-            let to_node = &coordinates[edge.to];
-
-            let edge_tuple = if edge.from < edge.to {
-                (edge.from, edge.to)
+            // Look up coordinates from the system's transformed coordinates array
+            // (Don't use embedded link coordinates - they aren't transformed correctly)
+            let (from_x, from_y) = if let Some(coord) = system.coordinate_at(base_pos) {
+                (coord.x, coord.y)
             } else {
-                (edge.to, edge.from)
+                web_sys::console::log_1(&format!("Could not find from coordinate for pos {}", base_pos).into());
+                return html! {};
+            };
+
+            let (to_x, to_y) = if let Some(coord) = system.coordinate_at(target_pos) {
+                (coord.x, coord.y)
+            } else {
+                web_sys::console::log_1(&format!("Could not find to coordinate for pos {}", target_pos).into());
+                return html! {};
+            };
+
+            // Convert to 0-based for selection comparison
+            let from_idx = (base_pos - 1) as usize;
+            let to_idx = (target_pos - 1) as usize;
+
+            let edge_tuple = if from_idx < to_idx {
+                (from_idx, to_idx)
+            } else {
+                (to_idx, from_idx)
             };
 
             let is_selected = self.selected_edge == Some(edge_tuple);
-            let stroke = if is_selected {
-                &system.color_scheme.selected_edge
-            } else {
-                &system.color_scheme.edges
-            };
+            let stroke = if is_selected { SELECTED_EDGE_COLOR } else { DEFAULT_EDGE_COLOR };
             let stroke_width = if is_selected { 3.0 } else { 1.5 };
 
             html! {
                 <line
-                    x1={ Self::scale_x(from_node.x).to_string() }
-                    y1={ Self::scale_y(from_node.y).to_string() }
-                    x2={ Self::scale_x(to_node.x).to_string() }
-                    y2={ Self::scale_y(to_node.y).to_string() }
-                    stroke={ stroke.clone() }
+                    x1={ from_x.to_string() }
+                    y1={ from_y.to_string() }
+                    x2={ to_x.to_string() }
+                    y2={ to_y.to_string() }
+                    stroke={ stroke }
                     stroke-width={ stroke_width.to_string() }
                     class="edge"
                 />
@@ -156,83 +162,79 @@ impl ApiGraphView {
         }).collect::<Html>()
     }
 
-    fn render_edge_labels(
-        &self,
-        edges: &[TopologyEdge],
-        coordinates: &[Coordinate],
-        terms: &[String],
-        connectives: &[(String, String, String)],
-    ) -> Html {
-        edges.iter().enumerate().map(|(edge_idx, edge)| {
-            // Safely get coordinates with bounds checking
-            if edge.from >= coordinates.len() || edge.to >= coordinates.len() {
+    /// Render edge labels for connectives
+    fn render_edge_labels(&self, system: &SystemView) -> Html {
+        system.connectives.iter().enumerate().map(|(idx, connective)| {
+            // Get the label from the connective's character
+            let label = connective.character
+                .as_ref()
+                .map(|c| c.value.as_str())
+                .unwrap_or("");
+
+            if label.is_empty() {
                 return html! {};
             }
 
-            let from_node = &coordinates[edge.from];
-            let to_node = &coordinates[edge.to];
+            let base_pos = connective.base_position.unwrap_or(0);
+            let target_pos = connective.target_position.unwrap_or(0);
 
-            // Calculate midpoint of the edge for label placement
-            let mid_x = (from_node.x + to_node.x) / 2.0;
-            let mut mid_y = (from_node.y + to_node.y) / 2.0;
+            if base_pos <= 0 || target_pos <= 0 {
+                return html! {};
+            }
 
-            // Calculate angle of the edge for label rotation
-            let dx = to_node.x - from_node.x;
-            let dy = to_node.y - from_node.y;
+            // Get coordinates for label placement
+            let (from_x, from_y) = if let Some(ref coord) = connective.base_coordinate {
+                (coord.x, coord.y)
+            } else if let Some(coord) = system.coordinate_at(base_pos) {
+                (coord.x, coord.y)
+            } else {
+                return html! {};
+            };
+
+            let (to_x, to_y) = if let Some(ref coord) = connective.target_coordinate {
+                (coord.x, coord.y)
+            } else if let Some(coord) = system.coordinate_at(target_pos) {
+                (coord.x, coord.y)
+            } else {
+                return html! {};
+            };
+
+            // Calculate midpoint for label placement
+            let mid_x = (from_x + to_x) / 2.0;
+            let mut mid_y = (from_y + to_y) / 2.0;
+
+            // Calculate angle for label rotation
+            let dx = to_x - from_x;
+            let dy = to_y - from_y;
             let angle = dy.atan2(dx) * 180.0 / std::f64::consts::PI;
 
-            // Adjust angle to keep text readable (not upside down)
-            // If angle is between 90 and 270 degrees (pointing left), flip by 180
+            // Keep text readable (not upside down)
             let rotation_angle = if angle > 90.0 || angle < -90.0 {
                 angle + 180.0
             } else {
                 angle
             };
 
-            // Get the term names for this edge's from and to nodes
-            let from_term = terms.get(edge.from).map(|s| s.as_str()).unwrap_or("");
-            let to_term = terms.get(edge.to).map(|s| s.as_str()).unwrap_or("");
-
-            // Find the connective that matches this edge
-            // connectives tuple is (name, from_term, to_term)
-            let label = connectives.iter()
-                .find(|(_, conn_from, conn_to)| {
-                    (conn_from == from_term && conn_to == to_term) ||
-                    (conn_from == to_term && conn_to == from_term) // Check both directions
-                })
-                .map(|(name, _, _)| name.as_str())
-                .unwrap_or("");
-
-            // Only render if there's a label
-            if label.is_empty() {
-                return html! {};
-            }
-
-            // Apply offset for crossing edges in tetrad (edges that cross near center)
-            // Detect crossing by checking if edges are nearly diagonal and close to center
+            // Offset crossing edges (for systems like tetrad where edges cross)
             let is_diagonal = dx.abs() > 100.0 && dy.abs() > 100.0;
             let near_center = mid_x > 300.0 && mid_x < 500.0 && mid_y > 300.0 && mid_y < 500.0;
 
             if is_diagonal && near_center {
-                // For tetrad crossing edges, offset alternately
-                if edge_idx % 2 == 0 {
-                    mid_y -= 25.0; // Move first crossing edge up more
+                if idx % 2 == 0 {
+                    mid_y -= 25.0;
                 } else {
-                    mid_y += 25.0; // Move second crossing edge down
+                    mid_y += 25.0;
                 }
             }
 
-            let mid_x_scaled = Self::scale_x(mid_x);
-            let mid_y_scaled = Self::scale_y(mid_y);
             let rect_width = label.len() as f64 * 7.0;
             let rect_height = 16.0;
 
             html! {
-                <g class="edge-label-group" transform={ format!("rotate({} {} {})", rotation_angle, mid_x_scaled, mid_y_scaled) }>
-                    // Background rectangle for better readability
+                <g class="edge-label-group" transform={ format!("rotate({} {} {})", rotation_angle, mid_x, mid_y) }>
                     <rect
-                        x={ (mid_x_scaled - rect_width / 2.0).to_string() }
-                        y={ (mid_y_scaled - rect_height / 2.0).to_string() }
+                        x={ (mid_x - rect_width / 2.0).to_string() }
+                        y={ (mid_y - rect_height / 2.0).to_string() }
                         width={ rect_width.to_string() }
                         height={ rect_height.to_string() }
                         fill="rgba(255, 255, 255, 0.9)"
@@ -241,10 +243,9 @@ impl ApiGraphView {
                         rx="4"
                         style="pointer-events: none;"
                     />
-                    // Label text
                     <text
-                        x={ mid_x_scaled.to_string() }
-                        y={ mid_y_scaled.to_string() }
+                        x={ mid_x.to_string() }
+                        y={ mid_y.to_string() }
                         text-anchor="middle"
                         dominant-baseline="middle"
                         class="edge-label"
@@ -258,41 +259,43 @@ impl ApiGraphView {
         }).collect::<Html>()
     }
 
-    fn render_nodes(
-        &self,
-        ctx: &Context<Self>,
-        coordinates: &[Coordinate],
-        system: &SystemData,
-    ) -> Html {
-        coordinates.iter().enumerate().map(|(idx, coord)| {
-            let is_selected = self.selected_node == Some(idx);
-            let fill = if is_selected {
-                &system.color_scheme.selected_node
-            } else {
-                // Use per-term color if available, otherwise fall back to system color
-                system.term_colors.get(idx).unwrap_or(&system.color_scheme.nodes)
-            };
-            let radius = if is_selected { 18.0 } else { 12.0 };
+    /// Render nodes from coordinates and terms
+    fn render_nodes(&self, ctx: &Context<Self>, system: &SystemView) -> Html {
+        system.coordinates.iter().map(|coord| {
+            let position = coord.position;
+            let idx = (position - 1) as usize;  // Convert 1-based position to 0-based index
 
+            let is_selected = self.selected_node == Some(idx);
+
+            // Get color for this node from colours array, or use default
+            let fill = if is_selected {
+                SELECTED_NODE_COLOR.to_string()
+            } else {
+                system.colour_at(position)
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| DEFAULT_NODE_COLOR.to_string())
+            };
+
+            let radius = if is_selected { 18.0 } else { 12.0 };
             let onclick = ctx.link().callback(move |_| ApiGraphMsg::NodeClicked(idx));
 
-            // Get vocabulary term for this node if available
-            let term = system.terms.get(idx).map(|s| s.as_str()).unwrap_or("");
+            // Get term label for this position
+            let term = system.term_at(position).unwrap_or("");
 
             html! {
                 <g class="node" onclick={ onclick }>
                     <circle
-                        cx={ Self::scale_x(coord.x).to_string() }
-                        cy={ Self::scale_y(coord.y).to_string() }
+                        cx={ coord.x.to_string() }
+                        cy={ coord.y.to_string() }
                         r={ radius.to_string() }
-                        fill={ fill.clone() }
+                        fill={ fill }
                         stroke="white"
                         stroke-width="2"
                         style="cursor: pointer;"
                     />
                     <text
-                        x={ Self::scale_x(coord.x).to_string() }
-                        y={ Self::scale_y(coord.y).to_string() }
+                        x={ coord.x.to_string() }
+                        y={ coord.y.to_string() }
                         text-anchor="middle"
                         dominant-baseline="middle"
                         fill="white"
@@ -301,13 +304,13 @@ impl ApiGraphView {
                         paint-order="stroke"
                         style="font-size: 12px; font-weight: bold; pointer-events: none; user-select: none;"
                     >
-                        { idx + 1 }
+                        { position }
                     </text>
                     // Render vocabulary label if available
                     if !term.is_empty() {
                         <text
-                            x={ Self::scale_x(coord.x).to_string() }
-                            y={ (Self::scale_y(coord.y) + radius + 16.0).to_string() }
+                            x={ coord.x.to_string() }
+                            y={ (coord.y + radius + 16.0).to_string() }
                             text-anchor="middle"
                             dominant-baseline="middle"
                             fill="#333"
