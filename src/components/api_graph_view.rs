@@ -12,18 +12,18 @@ pub struct ApiGraphViewProps {
     pub system: SystemView,
     #[prop_or_default]
     pub on_navigate: Option<Callback<String>>,
+    #[prop_or_default]
+    pub show_edge_labels: bool,
 }
 
 pub enum ApiGraphMsg {
     NodeClicked(usize),
     EdgeClicked(usize, usize),
-    ToggleEdgeLabels,
 }
 
 pub struct ApiGraphView {
     selected_node: Option<usize>,
     selected_edge: Option<(usize, usize)>,
-    show_edge_labels: bool,
 }
 
 impl Component for ApiGraphView {
@@ -34,7 +34,6 @@ impl Component for ApiGraphView {
         Self {
             selected_node: None,
             selected_edge: None,
-            show_edge_labels: false,
         }
     }
 
@@ -60,37 +59,22 @@ impl Component for ApiGraphView {
                 }
                 true
             }
-            ApiGraphMsg::ToggleEdgeLabels => {
-                self.show_edge_labels = !self.show_edge_labels;
-                true
-            }
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let system = &ctx.props().system;
-        let on_toggle = ctx.link().callback(|_| ApiGraphMsg::ToggleEdgeLabels);
+        let show_edge_labels = ctx.props().show_edge_labels;
 
         html! {
             <div class="graph-view">
-                <div class="graph-controls">
-                    <label class="control-toggle">
-                        <input
-                            type="checkbox"
-                            checked={self.show_edge_labels}
-                            onclick={on_toggle}
-                        />
-                        <span>{"Show Edge Labels"}</span>
-                    </label>
-                </div>
-
                 <svg
                     class="graph-svg"
                     viewBox="0 0 800 800"
                     preserveAspectRatio="xMidYMid meet"
                 >
                     { self.render_edges(system) }
-                    if self.show_edge_labels {
+                    if show_edge_labels {
                         { self.render_edge_labels(system) }
                     }
                     { self.render_nodes(ctx, system) }
@@ -182,18 +166,14 @@ impl ApiGraphView {
                 return html! {};
             }
 
-            // Get coordinates for label placement
-            let (from_x, from_y) = if let Some(ref coord) = connective.base_coordinate {
-                (coord.x, coord.y)
-            } else if let Some(coord) = system.coordinate_at(base_pos) {
+            // Get coordinates for label placement - use system's transformed coordinates
+            let (from_x, from_y) = if let Some(coord) = system.coordinate_at(base_pos) {
                 (coord.x, coord.y)
             } else {
                 return html! {};
             };
 
-            let (to_x, to_y) = if let Some(ref coord) = connective.target_coordinate {
-                (coord.x, coord.y)
-            } else if let Some(coord) = system.coordinate_at(target_pos) {
+            let (to_x, to_y) = if let Some(coord) = system.coordinate_at(target_pos) {
                 (coord.x, coord.y)
             } else {
                 return html! {};

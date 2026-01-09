@@ -18,6 +18,7 @@ pub enum ApiAppMsg {
     LoadError(String),
     NavigateToSystem(String),
     NavigateBack,
+    ToggleEdgeLabels,
 }
 
 pub struct ApiApp {
@@ -27,6 +28,7 @@ pub struct ApiApp {
     error: Option<String>,
     graphql_client: GraphQLClient,
     breadcrumbs: Vec<Breadcrumb>,
+    show_edge_labels: bool,
 }
 
 impl Component for ApiApp {
@@ -60,6 +62,7 @@ impl Component for ApiApp {
             error: None,
             graphql_client,
             breadcrumbs: vec![],
+            show_edge_labels: false,
         }
     }
 
@@ -166,6 +169,10 @@ impl Component for ApiApp {
                 self.error = Some(error);
                 true
             }
+            ApiAppMsg::ToggleEdgeLabels => {
+                self.show_edge_labels = !self.show_edge_labels;
+                true
+            }
         }
     }
 
@@ -173,6 +180,7 @@ impl Component for ApiApp {
         let on_select = ctx.link().callback(ApiAppMsg::SelectSystem);
         let on_navigate = ctx.link().callback(ApiAppMsg::NavigateToSystem);
         let on_back = ctx.link().callback(|_| ApiAppMsg::NavigateBack);
+        let on_toggle_edge_labels = ctx.link().callback(|_| ApiAppMsg::ToggleEdgeLabels);
 
         html! {
             <div class="app">
@@ -209,6 +217,8 @@ impl Component for ApiApp {
                                         systems={ legacy_systems }
                                         selected={ selected_name }
                                         on_select={ on_select }
+                                        show_edge_labels={ self.show_edge_labels }
+                                        on_toggle_edge_labels={ Some(on_toggle_edge_labels.clone()) }
                                     />
                                 }
                             }
@@ -253,6 +263,7 @@ impl Component for ApiApp {
                                     <ApiGraphView
                                         system={ system.clone() }
                                         on_navigate={ Some(on_navigate) }
+                                        show_edge_labels={ self.show_edge_labels }
                                     />
                                 }
                             } else {
