@@ -148,6 +148,8 @@ impl ApiGraphView {
 
     /// Render edge labels for connectives
     fn render_edge_labels(&self, system: &SystemView) -> Html {
+        web_sys::console::log_1(&format!("render_edge_labels: {} connectives to render", system.connectives.len()).into());
+
         system.connectives.iter().enumerate().map(|(idx, connective)| {
             // Get the label from the connective's character
             let label = connective.character
@@ -155,7 +157,11 @@ impl ApiGraphView {
                 .map(|c| c.value.as_str())
                 .unwrap_or("");
 
+            web_sys::console::log_1(&format!("Connective {}: label='{}', base_pos={:?}, target_pos={:?}",
+                idx, label, connective.base_position, connective.target_position).into());
+
             if label.is_empty() {
+                web_sys::console::log_1(&"Skipping: empty label".into());
                 return html! {};
             }
 
