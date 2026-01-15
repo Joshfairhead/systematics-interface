@@ -1,180 +1,170 @@
 # Systematics Interface
 
-A geometric visualization interface for complete graphs K1-K12, built with Rust and Yew WebAssembly.
+A web-based visualization for complete graphs (K1-K12) with GraphQL API integration, built with Rust/Yew WebAssembly.
 
 ## Overview
 
-This interface displays complete graphs from 1 to 12 nodes (Monad through Dodecad) with geometric positioning and interactive features. Each system represents a complete graph with:
+Interactive visualization of complete graphs from Monad (K1) to Dodecad (K12), featuring:
 
-- **Indexed nodes** with visual coordinates
-- **Complete edge connectivity** (all nodes connected to all other nodes)
-- **Interactive selection** of nodes and edges
-- **Geometric layouts** optimized for each system size
-- **Color-coded systems** with unique visual themes
+- **GraphQL API Integration** - Real-time data from systematics backend
+- **Edge Labels** - Toggle connective/character labels on graph edges
+- **Geometric Layouts** - Optimized positioning for each system
+- **Interactive Navigation** - Click nodes to navigate between systems
+- **Glassmorphic UI** - Modern, polished interface design
 
-## Systems Included
+## Quick Start
 
-| System | Graph | Nodes | Description |
-|--------|-------|-------|-------------|
-| Monad | K1 | 1 | The unity, the point, the source |
-| Dyad | K2 | 2 | Duality, polarity, the line |
-| Triad | K3 | 3 | Trinity, the triangle, three forces |
-| Tetrad | K4 | 4 | Quaternary, the square, four elements |
-| Pentad | K5 | 5 | Five-fold pattern, the pentagon |
-| Hexad | K6 | 6 | Six-fold symmetry, the hexagon |
-| Heptad | K7 | 7 | Seven principles, the heptagon |
-| Octad | K8 | 8 | Eight-fold path, the octagon |
-| Ennead | K9 | 9 | Nine spheres, completion |
-| Decad | K10 | 10 | Ten sephiroth, perfection |
-| Undecad | K11 | 11 | Eleven dimensions, transcendence |
-| Dodecad | K12 | 12 | Twelve-fold cosmos, totality |
+### Prerequisites
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install Trunk
+cargo install trunk
+```
+
+### Running the Application
+```bash
+# Development server (with hot reload)
+trunk serve
+
+# Production build
+trunk build --release
+```
+
+The app will be available at `http://localhost:8080`
+
+### Backend API
+The app connects to the GraphQL API at `http://localhost:8000/graphql`. Make sure the [systematics backend](https://github.com/Joshfairhead/systematics-v0.0.3) is running.
+
+## Features
+
+### Graph Visualization
+- **12 Complete Graphs** - Monad (K1) through Dodecad (K12)
+- **SVG Rendering** - Crisp, scalable vector graphics
+- **Color-Coded Systems** - Unique colors for each system
+- **Node Labels** - Term labels from vocabulary data
+
+### Edge Labels
+- **Toggle Switch** - Enable/disable edge labels via top navigation
+- **Connective Characters** - Display relationship labels on edges
+- **Smart Positioning** - Labels rotate to follow edge angle
+- **Collision Avoidance** - Offset for crossing edges (Tetrad)
+
+### Navigation
+- **System Selection** - Top navigation bar with all 12 systems
+- **Node Navigation** - Click nodes to navigate to related systems
+- **Breadcrumb Trail** - Track navigation history
+- **Back Button** - Return to previous systems
 
 ## Project Structure
 
 ```
 systematics-interface/
 ├── src/
-│   ├── lib.rs                  # WASM entry point
-│   ├── main.rs                 # Main entry point
-│   ├── app.rs                  # Main app component
+│   ├── api/                    # GraphQL API client
+│   │   ├── graphql_client.rs   # Query execution
+│   │   └── models.rs           # Data models
+│   ├── components/
+│   │   ├── api_graph_view.rs   # Graph renderer
+│   │   └── system_selector.rs  # Navigation bar
 │   ├── core/
-│   │   ├── geometry.rs         # Graph layout calculations
-│   │   └── system_config.rs    # System configurations
-│   └── components/
-│       ├── graph_view.rs       # SVG graph renderer
-│       └── system_selector.rs  # System selection UI
-├── configs/                    # JSON config files for each system
-│   ├── monad.json
-│   ├── dyad.json
-│   └── ...
-├── style.css                   # UI styling
-└── index.html                  # HTML template
+│   │   ├── geometry.rs         # Layout calculations
+│   │   └── system_config.rs    # System definitions
+│   ├── api_app.rs              # Main app with API
+│   └── lib.rs                  # WASM entry
+├── style.css                   # Glassmorphic UI styles
+├── index.html                  # HTML template
+└── archive/                    # Historical documentation
 ```
 
-## Features
+## Systems
 
-### Graph Visualization
-- **SVG-based rendering** for crisp, scalable graphics
-- **Geometric node positioning** using mathematical calculations
-- **Complete graph edges** connecting all nodes
-- **Symbolic circles** for monad and dyad systems
+| System | Graph | Nodes | Edges |
+|--------|-------|-------|-------|
+| Monad | K1 | 1 | 0 |
+| Dyad | K2 | 2 | 1 |
+| Triad | K3 | 3 | 3 |
+| Tetrad | K4 | 4 | 6 |
+| Pentad | K5 | 5 | 10 |
+| Hexad | K6 | 6 | 15 |
+| Heptad | K7 | 7 | 21 |
+| Octad | K8 | 8 | 28 |
+| Ennead | K9 | 9 | 36 |
+| Decad | K10 | 10 | 45 |
+| Hendecad | K11 | 11 | 55 |
+| Dodecad | K12 | 12 | 66 |
 
-### Interactivity
-- **Click nodes** to select and highlight them
-- **View node indexes** (0 through n-1)
-- **Selection feedback** with visual highlights and info display
-- **System switching** via sidebar navigation
+## GraphQL Integration
 
-### Data Structure
+### API Queries
 
-Each graph is composed of:
+The app uses these GraphQL queries:
+
+- `allSystems` - Fetch all 12 systems at startup
+- `systemByName(name: String!)` - Fetch specific system data
+
+### Data Flow
+
+1. **Startup**: Fetch all systems metadata
+2. **Selection**: Load detailed system data (coordinates, terms, edges, connectives)
+3. **Transform**: Convert API coordinates to viewport space (800x800 SVG)
+4. **Render**: Display graph with nodes, edges, and optional labels
+
+### Coordinate Transformation
+
+The API returns coordinates in various scales. The frontend transforms them to fit an 800x800 viewport:
 
 ```rust
-pub struct GraphLayout {
-    pub nodes: Vec<Point>,        // Node positions
-    pub edges: Vec<Edge>,         // Complete graph edges
-    pub node_radius: f64,         // Visual node size
-    pub symbolic_circle: Option<SymbolicCircle>,
-    pub symbolic_circles: Vec<SymbolicCircle>,
-}
-
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-pub struct Edge {
-    pub from: usize,  // Node index
-    pub to: usize,    // Node index
-}
+// Scale and center coordinates
+let scaled_x = (x - min_x) * scale_factor + margin;
+let scaled_y = (y - min_y) * scale_factor + margin;
 ```
 
-## Building and Running
+## Current State
 
-### Prerequisites
-- Rust (latest stable)
-- Trunk (for WebAssembly bundling)
+### Working Features
+✅ All 12 systems render correctly
+✅ GraphQL API integration
+✅ Node navigation between systems
+✅ Edge label toggle switch
+✅ Edge labels for Triad and Tetrad
+✅ Glassmorphic UI design
 
-```bash
-# Install Trunk
-cargo install trunk
+### Known Limitations
+⚠️ Edge labels only show for systems with `connectives` data in API
+⚠️ Pentad and higher systems need backend to populate connectives
 
-# Build and serve
-trunk serve
+## Development
 
-# Build for production
-trunk build --release
-```
+### Architecture
+- **Frontend**: Rust + Yew (React-like WASM framework)
+- **Styling**: CSS with glassmorphism effects
+- **API Client**: Custom GraphQL client with `reqwest`
+- **Rendering**: SVG for geometric precision
 
-The application will be available at `http://localhost:8080`
+### Key Components
 
-## Usage
+**ApiApp** - Main application state and API calls
+**ApiGraphView** - SVG graph rendering with edge labels
+**SystemSelector** - Top navigation with edge label toggle
 
-1. **Select a system** from the sidebar (Monad through Dodecad)
-2. **View the graph** with all nodes and edges displayed
-3. **Click nodes** to select them and view their index
-4. **Observe the geometry** - each system has a unique layout:
-   - Monad: Single point with symbolic circle
-   - Dyad: Two points with vesica piscis
-   - Triad: Equilateral triangle
-   - Tetrad: Diamond/square
-   - Pentad+: Regular polygons
+## Documentation
 
-## Configuration Files
-
-Each system has a JSON configuration in `configs/`:
-
-```json
-{
-  "name": "triad",
-  "display_name": "Triad",
-  "node_count": 3,
-  "k_notation": "K3",
-  "description": "Trinity, the triangle, three forces",
-  "color_scheme": {
-    "nodes": "#9B59B6",
-    "edges": "#888888",
-    "selected_node": "#FF6B6B",
-    "selected_edge": "#FF6B6B"
-  }
-}
-```
-
-## GraphQL API Integration
-
-This interface now supports fetching data from the [systematics-v0.0.3 GraphQL API](https://github.com/Joshfairhead/systematics-v0.0.3).
-
-### Quick Start
-
-**Using Mock Data (Default):**
-```bash
-trunk serve
-```
-
-**Using Real GraphQL API:**
-1. Edit `src/api_app.rs` line 33: `let use_graphql = true;`
-2. Update endpoint URL on line 36 to your API
-3. Run: `trunk serve`
-
-See [ENABLE_GRAPHQL.md](ENABLE_GRAPHQL.md) for quick setup or [GRAPHQL_INTEGRATION.md](GRAPHQL_INTEGRATION.md) for full documentation.
-
-## Future Enhancements
-
-- Edge interaction and selection
-- Node labeling options
-- Export graph data
-- Animation transitions between systems
-- Custom node positioning
-- Environment-based API configuration
-- Caching and real-time updates
+Historical implementation docs are in the `archive/` folder:
+- API integration guides
+- Coordinate transformation details
+- GraphQL setup instructions
+- Geometry implementation notes
 
 ## Technologies
 
 - **Rust** - Systems programming language
-- **Yew** - React-like framework for WebAssembly
+- **Yew** - WebAssembly UI framework
 - **WebAssembly** - High-performance web execution
 - **SVG** - Scalable vector graphics
-- **Trunk** - WASM web application bundler
+- **Trunk** - WASM bundler
+- **GraphQL** - API query language
 
 ## License
 
