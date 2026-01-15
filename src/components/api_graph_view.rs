@@ -147,47 +147,60 @@ impl ApiGraphView {
     }
 
     /// Render edge labels for connectives
+    /// Instead of iterating connectives independently, we iterate through lines
+    /// and find matching connectives to ensure labels align with the correct edges
     fn render_edge_labels(&self, system: &SystemView) -> Html {
-        web_sys::console::log_1(&format!("render_edge_labels: {} connectives to render", system.connectives.len()).into());
+        web_sys::console::log_1(&format!("render_edge_labels: {} lines, {} connectives",
+            system.lines.len(), system.connectives.len()).into());
 
-        system.connectives.iter().enumerate().map(|(idx, connective)| {
+        system.lines.iter().enumerate().map(|(line_idx, line)| {
+            let line_base_pos = line.base_position.unwrap_or(0);
+            let line_target_pos = line.target_position.unwrap_or(0);
+
+            // Find the connective that matches this line's positions
+            let matching_connective = system.connectives.iter().enumerate().find(|(_, conn)| {
+                let conn_base = conn.base_position.unwrap_or(0);
+                let conn_target = conn.target_position.unwrap_or(0);
+                conn_base == line_base_pos && conn_target == line_target_pos
+            });
+
+            let Some((conn_idx, connective)) = matching_connective else {
+                web_sys::console::log_1(&format!("No connective found for line {}: {}→{}",
+                    line_idx, line_base_pos, line_target_pos).into());
+                return html! {};
+            };
+
             // Get the label from the connective's character
             let label = connective.character
                 .as_ref()
                 .map(|c| c.value.as_str())
                 .unwrap_or("");
 
-            web_sys::console::log_1(&format!("Connective {}: label='{}', base_pos={:?}, target_pos={:?}",
-                idx, label, connective.base_position, connective.target_position).into());
-
             if label.is_empty() {
-                web_sys::console::log_1(&"Skipping: empty label".into());
                 return html! {};
             }
 
-            let base_pos = connective.base_position.unwrap_or(0);
-            let target_pos = connective.target_position.unwrap_or(0);
+            web_sys::console::log_1(&format!("Line {} ({}→{}) matched with connective {} (label='{}')",
+                line_idx, line_base_pos, line_target_pos, conn_idx, label).into());
 
-            if base_pos <= 0 || target_pos <= 0 {
-                return html! {};
-            }
-
-            // Get coordinates for label placement - use system's transformed coordinates
-            let (from_x, from_y) = if let Some(coord) = system.coordinate_at(base_pos) {
+            // Use the SAME coordinate lookup as render_edges to ensure alignment
+            let (from_x, from_y) = if let Some(coord) = system.coordinate_at(line_base_pos) {
                 (coord.x, coord.y)
             } else {
+                web_sys::console::log_1(&format!("No coordinate for base_pos {}", line_base_pos).into());
                 return html! {};
             };
 
-            let (to_x, to_y) = if let Some(coord) = system.coordinate_at(target_pos) {
+            let (to_x, to_y) = if let Some(coord) = system.coordinate_at(line_target_pos) {
                 (coord.x, coord.y)
             } else {
+                web_sys::console::log_1(&format!("No coordinate for target_pos {}", line_target_pos).into());
                 return html! {};
             };
 
             // Calculate midpoint for label placement
             let mid_x = (from_x + to_x) / 2.0;
-            let mut mid_y = (from_y + to_y) / 2.0;
+            let mid_y = (from_y + to_y) / 2.0;
 
             // Calculate angle for label rotation
             let dx = to_x - from_x;
@@ -201,46 +214,44 @@ impl ApiGraphView {
                 angle
             };
 
-            // Offset crossing edges (for systems like tetrad where edges cross)
-            let is_diagonal = dx.abs() > 100.0 && dy.abs() > 100.0;
-            let near_center = mid_x > 300.0 && mid_x < 500.0 && mid_y > 300.0 && mid_y < 500.0;
-
-            if is_diagonal && near_center {
-                if idx % 2 == 0 {
-                    mid_y -= 25.0;
-                } else {
-                    mid_y += 25.0;
-                }
-            }
-
             let rect_width = label.len() as f64 * 7.0;
             let rect_height = 16.0;
 
             html! {
-                <g class="edge-label-group" transform={ format!("rotate({} {} {})", rotation_angle, mid_x, mid_y) }>
-                    <rect
-                        x={ (mid_x - rect_width / 2.0).to_string() }
-                        y={ (mid_y - rect_height / 2.0).to_string() }
-                        width={ rect_width.to_string() }
-                        height={ rect_height.to_string() }
-                        fill="rgba(255, 255, 255, 0.9)"
-                        stroke="rgba(37, 99, 235, 0.3)"
-                        stroke-width="0.5"
-                        rx="4"
+                <>
+                    // Debug: Show actual midpoint with a red circle
+                    <circle
+                        cx={ mid_x.to_string() }
+                        cy={ mid_y.to_string() }
+                        r="3"
+                        fill="red"
                         style="pointer-events: none;"
                     />
-                    <text
-                        x={ mid_x.to_string() }
-                        y={ mid_y.to_string() }
-                        text-anchor="middle"
-                        dominant-baseline="middle"
-                        class="edge-label"
-                        fill="#2563eb"
-                        style="font-size: 10px; font-weight: 500; pointer-events: none; user-select: none;"
-                    >
-                        { label }
-                    </text>
-                </g>
+                    <g class="edge-label-group" transform={ format!("translate({} {}) rotate({})", mid_x, mid_y, rotation_angle) }>
+                        <rect
+                            x={ (-rect_width / 2.0).to_string() }
+                            y={ (-rect_height / 2.0).to_string() }
+                            width={ rect_width.to_string() }
+                            height={ rect_height.to_string() }
+                            fill="rgba(255, 255, 255, 0.9)"
+                            stroke="rgba(37, 99, 235, 0.3)"
+                            stroke-width="0.5"
+                            rx="4"
+                            style="pointer-events: none;"
+                        />
+                        <text
+                            x="0"
+                            y="0"
+                            text-anchor="middle"
+                            dominant-baseline="middle"
+                            class="edge-label"
+                            fill="#2563eb"
+                            style="font-size: 10px; font-weight: 500; pointer-events: none; user-select: none;"
+                        >
+                            { label }
+                        </text>
+                    </g>
+                </>
             }
         }).collect::<Html>()
     }
